@@ -1,3 +1,5 @@
+import 'package:cyberguard/const/interface.dart';
+import 'package:cyberguard/interface/partials/level_score_wheel.dart';
 import 'package:cyberguard/interface/screens/home/home_app_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +22,15 @@ class HomeScreen extends StatelessWidget {
         child: CustomScrollView(
           controller: _scrollController,
           slivers: [
-            CGHomeAppBar(),
+            CGHomeAppBar(
+              expandedHeight: 500,
+              childBuilder: (final double scrollPercentage) => Column(
+                children: const [
+                  SizedBox(height: kSpaceUnitPx),
+                  LevelScoreWheel(),
+                ],
+              ),
+            ),
             const SliverToBoxAdapter(
               child: SizedBox(
                 height: 1000,
