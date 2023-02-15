@@ -15,9 +15,16 @@ A protected, mobile, account manager that enables
     - [`partials/`](./lib/interface/partials) - Application-specific 'parts' that may be re-used across the app for greater consistency (widgets that achieve some application-specific goal or interact with application-specific data).
     - [`screens/`](./lib/interface/screens) - Widgets that implement an entire screen that will be pushed onto the navigation stack (and may render nested widgets). For screens with lots of custom components, a sub-directory for that screen might be used instead.
     - [`utility/`](./lib/interface/utility) - Static classes, that might be registered in the locator, that are likely to be called for UI rendering purposes.
-  - [`app.dart`](./lib/app.dart) - Root-level definition of the MaterialApp. Contains core application configuration.
-  - [`locator.dart`](./lib/locator.dart) - Statically register root-level singletons to be accessed throughout the app.
+  - [`app.dart`](lib/app.dart) - Root-level definition of the MaterialApp. Contains core application configuration.
+  - [`locator.dart`](lib/locator.dart) - Statically register root-level singletons to be accessed throughout the app.
   - [`main.dart`](./lib/main.dart) - The main entry point of the application.
+
+Files that have a lot of component classes, or a 'main' class and other
+supporting classes (such as in the case of 'screens' where there is a screen
+class and potentially lots of supporting widgets specifically only to that
+screen), may have the initial file and a 'supporting directory' of the secondary
+classes. e.g., the `home.dart` file containing the `HomeScreen` class, has a
+`home/` directory containing supporting widgets for the `HomeScreen` class.
 
 ## Naming Conventions
 Where the name of the app, `CyberGuard` would appear, `CG` is used except in
