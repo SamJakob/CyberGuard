@@ -36,17 +36,20 @@ final _router = GoRouter(
         GoRoute(
           path: '/accounts',
           parentNavigatorKey: _shellNavigatorKey,
-          pageBuilder: (final context, final state) => RootScreen.createTabPageBuilder(context, state, const AccountsScreen()),
+          pageBuilder: (final context, final state) =>
+              RootScreen.createTabPageBuilder(context, state, AccountsScreen()),
         ),
         GoRoute(
           path: '/connections',
           parentNavigatorKey: _shellNavigatorKey,
-          pageBuilder: (final context, final state) => RootScreen.createTabPageBuilder(context, state, const ConnectionsScreen()),
+          pageBuilder: (final context, final state) =>
+              RootScreen.createTabPageBuilder(context, state, const ConnectionsScreen()),
         ),
         GoRoute(
           path: '/multi-factor',
           parentNavigatorKey: _shellNavigatorKey,
-          pageBuilder: (final context, final state) => RootScreen.createTabPageBuilder(context, state, const MultiFactorScreen()),
+          pageBuilder: (final context, final state) =>
+              RootScreen.createTabPageBuilder(context, state, const MultiFactorScreen()),
         )
       ],
     ),
@@ -67,6 +70,7 @@ class CGApp extends StatelessWidget {
         title: 'CyberGuard',
         theme: ThemeData(
           useMaterial3: true,
+          brightness: Brightness.light,
           colorSchemeSeed: kAppThemeColor,
           fontFamily: "Source Sans Pro",
           highlightColor: Colors.transparent,

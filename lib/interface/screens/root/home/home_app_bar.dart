@@ -56,7 +56,8 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
   double get maxShrinkOffset => maxExtent - minExtent;
 
   @override
-  bool shouldRebuild(covariant final SliverPersistentHeaderDelegate oldDelegate) => oldDelegate.maxExtent != maxExtent || oldDelegate.minExtent != minExtent;
+  bool shouldRebuild(covariant final SliverPersistentHeaderDelegate oldDelegate) =>
+      oldDelegate.maxExtent != maxExtent || oldDelegate.minExtent != minExtent;
 
   @override
   Widget build(final BuildContext context, final double shrinkOffset, final bool overlapsContent) {
@@ -78,7 +79,7 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
               ),
         child: Container(
           padding: EdgeInsets.only(bottom: (maxExtent * (1 - curveStartFraction)) * (1 - scrollPercentage)),
-          color: Theme.of(context).colorScheme.primary,
+          color: Theme.of(context).colorScheme.primaryContainer,
           child: SafeArea(
             top: true,
             left: true,
@@ -91,7 +92,7 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: kSpaceUnitPx * 1.5),
                     child: IconTheme(
-                      data: Theme.of(context).iconTheme.copyWith(color: context.colorScheme.onPrimary),
+                      data: Theme.of(context).iconTheme.copyWith(color: context.colorScheme.onPrimaryContainer),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -102,7 +103,7 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
                               Text(
                                 "Welcome back,",
                                 style: TextStyle(
-                                  color: context.colorScheme.onPrimary,
+                                  color: context.colorScheme.onPrimaryContainer,
                                   fontSize: 18,
                                   fontWeight: FontWeight.normal,
                                 ),
@@ -111,7 +112,7 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
                                 "John",
                                 style: TextStyle(
                                   height: 1.0,
-                                  color: context.colorScheme.onPrimary,
+                                  color: context.colorScheme.onPrimaryContainer,
                                   fontSize: 24,
                                   fontWeight: FontWeight.w700,
                                 ),

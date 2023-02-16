@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
             actions: [
               IconButton(
                 onPressed: () {
-                  context.go('/settings');
+                  context.push('/settings');
                 },
                 icon: const HeroIcon(HeroIcons.cog, size: 32),
               ),
@@ -44,20 +44,26 @@ class HomeScreen extends StatelessWidget {
                   ),
                   Expanded(child: Container()),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: kSpaceUnitPx * 1.5, vertical: kSpaceUnitPx).copyWith(top: 0),
+                    padding: const EdgeInsets.symmetric(horizontal: kSpaceUnitPx * 1.5, vertical: kSpaceUnitPx)
+                        .copyWith(top: 0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        HeroIcon(HeroIcons.exclamationTriangle, size: 48, color: context.colorScheme.onPrimary),
+                        HeroIcon(HeroIcons.exclamationTriangle,
+                            size: 48, color: context.colorScheme.onPrimaryContainer),
                         const SizedBox(width: kSpaceUnitPx),
                         Expanded(
                           child: RichText(
                             text: TextSpan(
                               children: [
-                                TextSpan(text: "You still have sections to complete!", style: TextStyle(color: context.colorScheme.onPrimary.withOpacity(0.8))),
+                                TextSpan(
+                                    text: "You still have sections to complete!",
+                                    style: TextStyle(color: context.colorScheme.onPrimaryContainer.withOpacity(0.8))),
                                 const TextSpan(text: " "),
-                                const TextSpan(text: "Completing them will improve your score."),
+                                TextSpan(
+                                    text: "Completing them will improve your score.",
+                                    style: TextStyle(color: context.colorScheme.onPrimaryContainer)),
                               ],
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -80,10 +86,11 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  HeroIcon(HeroIcons.shieldCheck, size: 48, color: context.colorScheme.primary),
+                  HeroIcon(HeroIcons.shieldCheck, size: 48, color: context.colorScheme.onPrimaryContainer),
                   Text(
                     "No issues!",
-                    style: TextStyle(color: context.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 24),
+                    style: TextStyle(
+                        color: context.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 24),
                   ),
                   Text(
                     "There are no security issues that need your attention.",

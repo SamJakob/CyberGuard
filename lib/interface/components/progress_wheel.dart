@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cyberguard/interface/utility/context.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
 
@@ -27,7 +28,7 @@ class ProgressWheel extends StatelessWidget {
             size: Size.square(size),
             painter: _ProgressWheelIndicator(
               backgroundColor: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.4),
-              color: Theme.of(context).colorScheme.onPrimary,
+              color: context.colorScheme.onPrimaryContainer,
               value: value,
             ),
           ),

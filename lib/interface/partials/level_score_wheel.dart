@@ -27,7 +27,7 @@ class LevelScoreWheel extends StatelessWidget {
           minFontSize: (size * 0.2).roundToDouble(),
           style: TextStyle(
             fontWeight: FontWeight.w900,
-            color: context.colorScheme.background,
+            color: context.colorScheme.onPrimaryContainer,
           ),
         ),
         AutoSizeText(
@@ -35,7 +35,7 @@ class LevelScoreWheel extends StatelessWidget {
           minFontSize: (size * 0.085).roundToDouble(),
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: context.colorScheme.onPrimary,
+            color: context.colorScheme.onPrimaryContainer,
           ),
         ),
       ],

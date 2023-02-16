@@ -1,3 +1,4 @@
+import 'package:cyberguard/interface/utility/context.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
@@ -15,25 +16,17 @@ class RootScreen extends StatelessWidget {
 
   /// Creates a [CustomTransitionPage] for a RootScreen tab.
   static Page<void> createTabPageBuilder(final BuildContext context, final GoRouterState state, final Widget child) {
-    return CustomTransitionPage<void>(
+    return NoTransitionPage<void>(
       key: state.pageKey,
       child: child,
-      transitionDuration: const Duration(milliseconds: 100),
-      transitionsBuilder: (final context, final animation, final secondaryAnimation, final child) {
-        return FadeTransition(
-          opacity: Tween<double>(begin: 0.8, end: 1.0).animate(animation),
-          child: child,
-        );
-      },
     );
   }
 
-  /// Returns the currently selected index (or 0 if an index couldn't be
-  /// found).
-  int getCurrentIndex(final BuildContext context) {
+  /// Returns the currently selected index (or null if an index couldn't be found).
+  int? getCurrentIndex(final BuildContext context) {
     final currentLocation = GoRouter.of(context).location;
     final index = tabs.indexWhere((final tab) => tab.target.startsWith(currentLocation));
-    return index < 0 ? 0 : index;
+    return index < 0 ? null : index;
   }
 
   /// Navigates to selected tab; [tabIndex].
@@ -44,27 +37,48 @@ class RootScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(final BuildContext context) {
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: (final index) => activateSelectedIndex(context, index),
-        currentIndex: getCurrentIndex(context),
-        useLegacyColorScheme: false,
-        type: BottomNavigationBarType.fixed,
-        items: tabs,
-      ),
-    );
+  Widget build(final BuildContext context) => Scaffold(
+        body: child,
+        bottomNavigationBar: _renderBottomNavigationBar(context),
+      );
+
+  Widget _renderBottomNavigationBar(final BuildContext context) {
+    // Attempt to retrieve the currently selected tab index.
+    final currentIndex = getCurrentIndex(context);
+
+    // Check if there is, in fact, a current index (i.e., whether currentIndex != null).
+    // If it's null, simply replace the bottom app bar with a placeholder.
+    if (currentIndex == null) {
+      return Container(
+        color: ElevationOverlay.applySurfaceTint(
+          NavigationBarTheme.of(context).backgroundColor ?? context.colorScheme.surface,
+          NavigationBarTheme.of(context).surfaceTintColor ?? context.colorScheme.surfaceTint,
+          NavigationBarTheme.of(context).elevation ?? 3.0,
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            height: NavigationBarTheme.of(context).height ?? 80,
+            width: double.infinity,
+          ),
+        ),
+      );
+    } else {
+      return NavigationBar(
+        onDestinationSelected: (final index) => activateSelectedIndex(context, index),
+        selectedIndex: currentIndex,
+        destinations: tabs,
+      );
+    }
   }
 }
 
-class _RootScreenTab extends BottomNavigationBarItem {
+class _RootScreenTab extends NavigationDestination {
   /// The page to navigate to when this tab is selected.
   final String target;
 
   const _RootScreenTab({
     required this.target,
     required super.icon,
-    super.label,
+    required super.label,
   });
 }
