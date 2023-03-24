@@ -10,44 +10,57 @@ class AccountsScreen extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    return Scrollbar(
-      controller: _scrollController,
-      child: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          RootAppBar(
-            title: "Accounts",
-            autoPadBottomWidget: true,
-            bottomWidgetSize: 80,
-            bottomWidget: Center(
-              child: SizedBox(
-                height: 50,
-                child: TextField(
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: context.colorScheme.surface,
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(1000),
-                      gapPadding: 4,
+    return Stack(
+      children: [
+        Scrollbar(
+          controller: _scrollController,
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              RootAppBar(
+                title: "Accounts",
+                autoPadBottomWidget: true,
+                bottomWidgetSize: 80,
+                bottomWidget: Center(
+                  child: SizedBox(
+                    height: 50,
+                    child: TextField(
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: context.colorScheme.surface,
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(1000),
+                          gapPadding: 4,
+                        ),
+                        hintText: "Search",
+                        prefixIcon: const HeroIcon(HeroIcons.magnifyingGlass),
+                      ),
                     ),
-                    hintText: "Search",
-                    prefixIcon: const HeroIcon(HeroIcons.magnifyingGlass),
                   ),
                 ),
               ),
-            ),
+              SliverFixedExtentList(
+                itemExtent: 50.0,
+                delegate: SliverChildBuilderDelegate((final context, final index) {
+                  return Center(
+                    child: Text("item $index"),
+                  );
+                }),
+              )
+            ],
           ),
-          SliverFixedExtentList(
-            itemExtent: 50.0,
-            delegate: SliverChildBuilderDelegate((final context, final index) {
-              return Center(
-                child: Text("item $index"),
-              );
-            }),
-          )
-        ],
-      ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton.extended(
+            onPressed: () {},
+            label: const Text("Add Account"),
+            icon: const HeroIcon(HeroIcons.userPlus),
+          ),
+        )
+      ],
     );
   }
 }

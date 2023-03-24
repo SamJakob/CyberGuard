@@ -86,11 +86,14 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  HeroIcon(HeroIcons.shieldCheck, size: 48, color: context.colorScheme.onPrimaryContainer),
+                  HeroIcon(HeroIcons.shieldCheck, size: 48, color: context.colorScheme.onBackground),
                   Text(
                     "No issues!",
                     style: TextStyle(
-                        color: context.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 24),
+                      color: context.colorScheme.onBackground,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
                   ),
                   Text(
                     "There are no security issues that need your attention.",
