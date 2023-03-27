@@ -290,7 +290,7 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
   /// Used to implement subclasses that may include additional data.
   String _toString([final String? typeName, final String? additionalData]) {
     // Add priority if this is part of a tree.
-    String priorityStr = _owner != null || true ? "priority = $priority, " : "";
+    String priorityStr = _owner != null ? "priority = $priority, " : "";
     String childStr = "";
 
     if (hasAccessMethods) {
