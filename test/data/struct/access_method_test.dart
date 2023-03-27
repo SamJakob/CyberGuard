@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:clock/clock.dart';
 import 'package:cyberguard/data/struct/access_method.dart';
 import 'package:flutter_test/flutter_test.dart';
