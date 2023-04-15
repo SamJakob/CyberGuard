@@ -7,7 +7,8 @@ void main() {
   /// Used to track values that should be created (relative to)
   /// the current date/time.
   final executionInstant = DateTime.now();
-  final previousExecutionInstant = DateTime.now().subtract(const Duration(seconds: 3));
+  final previousExecutionInstant =
+      DateTime.now().subtract(const Duration(seconds: 3));
 
   group("test access method", () {
     test("access method sub classes instantiate correctly", () {
@@ -50,7 +51,8 @@ void main() {
         // Check the child.
         // Check that both have correct added date.
         expect(method.added, equals(executionInstant));
-        expect(methodWithSubMethods.methods!.first.added, equals(previousExecutionInstant));
+        expect(methodWithSubMethods.methods!.first.added,
+            equals(previousExecutionInstant));
       });
     });
   });
@@ -68,11 +70,14 @@ void main() {
       var googleAccountRequirements = AccessMethodTree({
         conjunction = AccessMethodConjunction({
           password = KnowledgeAccessMethod('mypassword', label: 'Password'),
-          smsCode = TemporalAccessMethod(label: 'SMS Two-Factor Authentication Code', methods: {
-            cellPhone = PhysicalAccessMethod(label: 'Cell Phone', methods: {
-              cellPhonePin = KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
-            }),
-          }),
+          smsCode = TemporalAccessMethod(
+              label: 'SMS Two-Factor Authentication Code',
+              methods: {
+                cellPhone = PhysicalAccessMethod(label: 'Cell Phone', methods: {
+                  cellPhonePin =
+                      KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
+                }),
+              }),
         }),
       });
 
@@ -109,6 +114,108 @@ void main() {
 
       expect(smsCode.methods!.first, equals(cellPhone));
       expect(cellPhone.methods!.first, equals(cellPhonePin));
+    });
+
+    test('priority (when adding, deleting and re-adding) works correctly', () {
+      AccessMethodConjunction conjunction;
+      KnowledgeAccessMethod<String> password;
+      TemporalAccessMethod smsCode;
+
+      // Partial snippet of the above example.
+      AccessMethodTree({
+        conjunction = AccessMethodConjunction({
+          password = KnowledgeAccessMethod('mypassword', label: 'Password'),
+          smsCode = TemporalAccessMethod(
+            label: 'SMS Two-Factor Authentication Code',
+          ),
+        }),
+      });
+
+      expect(conjunction.methods.first, equals(password));
+      expect(conjunction.methods.last, equals(smsCode));
+
+      conjunction.methods.remove(password);
+
+      expect(conjunction.methods.first, equals(smsCode));
+      expect(smsCode.priority, equals(0));
+      expect(conjunction.methods.last, equals(smsCode));
+      expect(smsCode.priority, equals(0));
+
+      // Recall that priority is ascending (0 is highest priority, 1 is
+      // lower priority, and that -1 is substituted for lowest priority).
+      final passwordWithHighestPriority = password.clone()..priority = 0;
+
+      // -1 defaults to maximum value.
+      final passwordWithLowestPriority = password.clone()..priority = -1;
+
+      // Test that adding and removing works with highest priority.
+      conjunction.methods.add(passwordWithHighestPriority);
+
+      expect(conjunction.methods.first, equals(passwordWithHighestPriority));
+      expect(conjunction.methods.last, equals(smsCode));
+
+      expect(conjunction.methods.first, equals(passwordWithHighestPriority));
+      expect(passwordWithHighestPriority.priority, equals(0));
+      expect(conjunction.methods.last, equals(smsCode));
+      expect(smsCode.priority, equals(1));
+
+      conjunction.methods.remove(passwordWithHighestPriority);
+
+      expect(conjunction.methods.first, equals(smsCode));
+      expect(smsCode.priority, equals(0));
+      expect(conjunction.methods.last, equals(smsCode));
+      expect(smsCode.priority, equals(0));
+
+      // Test that adding and removing works with lowest priority.
+      conjunction.methods.add(passwordWithLowestPriority);
+
+      expect(conjunction.methods.first, equals(smsCode));
+      expect(smsCode.priority, equals(0));
+      expect(conjunction.methods.last, equals(passwordWithLowestPriority));
+      expect(passwordWithLowestPriority.priority, equals(1));
+    });
+  });
+
+  group("test exceptions", () {
+    test('re-adding element already in tree should throw error', () {
+      AccessMethodConjunction conjunction;
+      KnowledgeAccessMethod<String> password;
+      TemporalAccessMethod smsCode;
+
+      // Partial snippet of the above example.
+      AccessMethodTree({
+        conjunction = AccessMethodConjunction({
+          password = KnowledgeAccessMethod('mypassword', label: 'Password'),
+          smsCode = TemporalAccessMethod(
+            label: 'SMS Two-Factor Authentication Code',
+          ),
+        }),
+      });
+
+      // Re-adding password.
+      expect(
+        () => conjunction.methods.add(password),
+        throwsA(isA<StateError>()),
+      );
+
+      // Re-adding smsCode.
+      expect(
+        () => conjunction.methods.add(smsCode),
+        throwsA(isA<StateError>()),
+      );
+
+      // Re-adding smsCode with different priority.
+      expect(
+        () => conjunction.methods.add(smsCode..priority = 3),
+        throwsA(isA<StateError>()),
+      );
+
+      // But, re-adding with a clone should work,
+      // because the clone is a different object.
+      expect(
+        () => conjunction.methods.add(smsCode.clone()),
+        returnsNormally,
+      );
     });
   });
 }

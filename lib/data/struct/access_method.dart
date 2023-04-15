@@ -40,7 +40,8 @@ typedef AccessMethodTreeSort = int Function(AccessMethod a, AccessMethod b);
 /// This has not presently been fully explored in the interests of time.
 class AccessMethodTree extends SplayTreeSet<AccessMethod> {
   /// Simply uses [AccessMethod.compareTo] to compare values.
-  static int defaultSort(final AccessMethod a, final AccessMethod b) => a.compareTo(b);
+  static int defaultSort(final AccessMethod a, final AccessMethod b) =>
+      a.compareTo(b);
 
   /// The sorting method currently being used for this tree. Setting this
   /// explicitly (or to something other than [defaultSort] may reduce
@@ -50,9 +51,11 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
   /// Returns true if either [defaultSort] is used, or if a sorting function
   /// has not been supplied at all (meaning the default was used). Otherwise,
   /// returns false.
-  bool get isUsingDefaultSortingMethod => currentSortingMethod == null || currentSortingMethod == defaultSort;
+  bool get isUsingDefaultSortingMethod =>
+      currentSortingMethod == null || currentSortingMethod == defaultSort;
 
-  AccessMethodTree._(final Set<AccessMethod> methods, {final AccessMethodTreeSort? sort})
+  AccessMethodTree._(final Set<AccessMethod> methods,
+      {final AccessMethodTreeSort? sort})
       : currentSortingMethod = sort,
         super(sort) {
     addAll(methods);
@@ -90,7 +93,8 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
   /// modified after [restructure] or [clone] is called. You should manipulate
   /// the tree using the default [sort], then run one of these methods and not
   /// modify it after.
-  AccessMethodTree restructure(final AccessMethodTreeSort sort) => clone(keepPriorities: true, sort: sort);
+  AccessMethodTree restructure(final AccessMethodTreeSort sort) =>
+      clone(keepPriorities: true, sort: sort);
 
   /// Normalizes the priority values of entries in the tree,
   void _normalize() {
@@ -101,7 +105,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
     // by priority, then restore the user's preferred sorting method.
     // Although we can slightly optimize this by checking if the default
     // sorting method is being used.
-    forEach((final element) => element.priority = currentPriority++);
+    forEach((final element) => element._priority = currentPriority++);
   }
 
   /// Computes the next highest (unoccupied) priority that will be used when
@@ -115,21 +119,24 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
     if (isEmpty) return 0;
 
     return 1 +
-        map((final method) => method.priority)
-            .reduce((final value, final element) => element > value ? element : value);
+        map((final method) => method.priority).reduce(
+            (final value, final element) => element > value ? element : value);
   }
 
   /// Used to augment the add event. Specifically, to inject the _owner
   /// property, and then return the result of the whole operation.
   bool _proxyAdd(final AccessMethod element) {
     if (element._owner != null) {
-      throw StateError("An AccessMethod may only belong to one AccessMethodTree but an AccessMethod "
-          "already belonging to a tree was just added to another tree. It must either be "
-          "removed from the initial tree first, or cloned before being added to the new one.");
+      throw DuplicateAccessMethodEntryStateError();
     }
 
     if (super.add(element)) {
+      // Associate the element with the current tree.
       element._owner = this;
+
+      // Normalize the tree.
+      _normalize();
+
       return true;
     } else {
       return false;
@@ -145,11 +152,6 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
 
   @override
   bool add(final AccessMethod element) {
-    // If the element is already in the tree, do not add it again. This would
-    // be an error, as it has invalid or nonsensical semantic meaning (in a
-    // disjunction or conjunction).
-    if (contains(element)) return false;
-
     // If the element's priority is negative, give it the highest score to make
     // it the lowest priority.
     if (element._priority < 0) {
@@ -159,7 +161,8 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
 
     // Otherwise, increment the priority of any other elements in the set that
     // are above this one, to 'insert' this one at the specified priority.
-    where((final method) => method._priority >= element._priority).forEach((final element) => element._priority++);
+    where((final method) => method._priority >= element._priority)
+        .forEach((final method) => method._priority++);
 
     // Then permit this element to be added.
     return _proxyAdd(element);
@@ -169,7 +172,12 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
   /// property, and then return the result of the whole operation.
   bool _proxyRemove(final AccessMethod element) {
     if (super.remove(element)) {
+      // Disassociate the element with the current tree.
       element._owner = null;
+
+      // Normalize the tree.
+      _normalize();
+
       return true;
     } else {
       return false;
@@ -184,9 +192,6 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
 
     // If the element is not in the tree, simply return false.
     if (!contains(object)) return false;
-
-    // Normalize the tree.
-    _normalize();
 
     return _proxyRemove(object);
   }
@@ -292,13 +297,15 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
       childStr = "\n";
 
       for (var method in methods!) {
-        childStr += "\t${method.toString().replaceAll("\n", "\n\t")}${method != methods!.last ? '\n' : ''}";
+        childStr +=
+            "\t${method.toString().replaceAll("\n", "\n\t")}${method != methods!.last ? '\n' : ''}";
       }
     }
 
     String attributesStr =
         "${priorityStr}label = $label${additionalData?.isNotEmpty ?? false ? ', $additionalData' : ''}";
-    attributesStr = "\n\t${attributesStr.replaceAll(RegExp(r",(\s*)"), ",\n\t")}\n";
+    attributesStr =
+        "\n\t${attributesStr.replaceAll(RegExp(r",(\s*)"), ",\n\t")}\n";
 
     return "${typeName ?? 'AccessMethod ($runtimeType)'}${hasAccessMethods ? ' (requires at least one child factor)' : ''} {$attributesStr}\n$childStr";
   }
@@ -435,5 +442,18 @@ class AccessMethodConjunction extends AccessMethod {
   }
 
   @override
-  String toString() => _toString('AccessMethodConjunction (requires ALL factors)');
+  String toString() =>
+      _toString('AccessMethodConjunction (requires ALL factors)');
+}
+
+//// EXCEPTIONS
+
+/// Thrown when an access method is added twice to the same tree.
+class DuplicateAccessMethodEntryStateError extends StateError {
+  DuplicateAccessMethodEntryStateError()
+      : super(
+          "An AccessMethod may only belong to one AccessMethodTree but an AccessMethod "
+          "already belonging to a tree was about to be added to another tree.\nIt must either be "
+          "removed from the initial tree first, or cloned before being added to the new one.",
+        );
 }
