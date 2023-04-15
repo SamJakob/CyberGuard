@@ -51,7 +51,7 @@ class _RootAppBarState extends State<RootAppBar> {
   @override
   Widget build(final BuildContext context) {
     final titleStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Theme.of(context).colorScheme.onPrimaryContainer,
       fontWeight: FontWeight.bold,
       fontSize: 24,
     );
@@ -60,7 +60,7 @@ class _RootAppBarState extends State<RootAppBar> {
       pinned: true,
       centerTitle: false,
       elevation: 3,
-      foregroundColor: context.colorScheme.onSurface,
+      foregroundColor: context.colorScheme.onPrimaryContainer,
       collapsedHeight: widget.collapsedHeight,
       expandedHeight: widget.expandedHeight,
       flexibleSpace: Container(

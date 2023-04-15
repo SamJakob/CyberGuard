@@ -5,6 +5,8 @@ import 'package:cyberguard/interface/screens/root/connections.dart';
 import 'package:cyberguard/interface/screens/root/home.dart';
 import 'package:cyberguard/interface/screens/root/multi_factor.dart';
 import 'package:cyberguard/interface/screens/settings.dart';
+import 'package:cyberguard/interface/utility/interface_protector.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
@@ -68,16 +70,23 @@ class CGApp extends StatelessWidget {
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'CyberGuard',
-        theme: ThemeData(
+        theme: FlexThemeData.light(
           useMaterial3: true,
-          brightness: Brightness.light,
-          colorSchemeSeed: kAppThemeColor,
           fontFamily: "Source Sans Pro",
-          highlightColor: Colors.transparent,
+          colors: kAppColorScheme.light,
         ),
+        darkTheme: FlexThemeData.dark(
+          useMaterial3: true,
+          fontFamily: "Source Sans Pro",
+          colors: kAppColorScheme.dark,
+        ),
+        themeMode: ThemeMode.system,
         themeAnimationCurve: Curves.easeInOutCubic,
         themeAnimationDuration: const Duration(milliseconds: 250),
         routerConfig: _router,
+        builder: (final BuildContext context, final Widget? child) {
+          return InterfaceProtector(interfaceBuilder: (final BuildContext context) => child!);
+        },
       ),
     );
   }

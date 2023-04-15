@@ -1,4 +1,5 @@
 import 'package:cyberguard/interface/partials/root_app_bar.dart';
+import 'package:cyberguard/interface/pages/new_account.dart';
 import 'package:cyberguard/interface/utility/context.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
@@ -55,7 +56,12 @@ class AccountsScreen extends StatelessWidget {
           right: 16,
           bottom: 16,
           child: FloatingActionButton.extended(
-            onPressed: () {},
+            onPressed: () {
+              showModalBottomSheet<void>(
+                context: context,
+                builder: (final BuildContext context) => const NewAccountPage(),
+              );
+            },
             label: const Text("Add Account"),
             icon: const HeroIcon(HeroIcons.userPlus),
           ),
