@@ -8,10 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		3910767529EB0B210077A17E /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910767429EB0B210077A17E /* Errors.swift */; };
 		391264C829DE3E2800664420 /* CGASecureStorage.m in Sources */ = {isa = PBXBuildFile; fileRef = 391264C729DE3E2800664420 /* CGASecureStorage.m */; };
 		391264CD29E2E89800664420 /* CGAUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 391264CC29E2E89800664420 /* CGAUtilities.m */; };
-		391264D329E35F4800664420 /* SecureStorageCKDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391264D229E35F4800664420 /* SecureStorageCKDelegate.swift */; };
-		393499C429E5436200896019 /* SecureEnclaveInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393499C329E5436200896019 /* SecureEnclaveInterface.swift */; };
+		391264D329E35F4800664420 /* SecureStorageDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391264D229E35F4800664420 /* SecureStorageDelegate.swift */; };
+		393499C429E5436200896019 /* KeychainInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393499C329E5436200896019 /* KeychainInterface.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		978B8F6F1D3862AE00F588F7 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AFFD8EE1D35381100E5BB4D /* AppDelegate.m */; };
 		97C146F31CF9000F007C117D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 97C146F21CF9000F007C117D /* main.m */; };
@@ -39,13 +40,14 @@
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		207F51DC4D428B6B2EA4B1D9 /* libPods-Runner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Runner.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D765ADD2754171C8F8E63A2 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		3910767429EB0B210077A17E /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		391264C729DE3E2800664420 /* CGASecureStorage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CGASecureStorage.m; sourceTree = "<group>"; };
 		391264C929E2E5C300664420 /* CGASecureStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CGASecureStorage.h; sourceTree = "<group>"; };
 		391264CB29E2E88B00664420 /* CGAUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CGAUtilities.h; sourceTree = "<group>"; };
 		391264CC29E2E89800664420 /* CGAUtilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CGAUtilities.m; sourceTree = "<group>"; };
 		391264CE29E35AA800664420 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
-		391264D229E35F4800664420 /* SecureStorageCKDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStorageCKDelegate.swift; sourceTree = "<group>"; };
-		393499C329E5436200896019 /* SecureEnclaveInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureEnclaveInterface.swift; sourceTree = "<group>"; };
+		391264D229E35F4800664420 /* SecureStorageDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStorageDelegate.swift; sourceTree = "<group>"; };
+		393499C329E5436200896019 /* KeychainInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainInterface.swift; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		6D7DF4119041BAE58D00B2FF /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
@@ -82,13 +84,29 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		3910767229EB0AD70077A17E /* SecureStorageDelegate */ = {
+			isa = PBXGroup;
+			children = (
+				391264D229E35F4800664420 /* SecureStorageDelegate.swift */,
+				393499C329E5436200896019 /* KeychainInterface.swift */,
+			);
+			path = SecureStorageDelegate;
+			sourceTree = "<group>";
+		};
+		3910767329EB0B190077A17E /* Errors */ = {
+			isa = PBXGroup;
+			children = (
+				3910767429EB0B210077A17E /* Errors.swift */,
+			);
+			path = Errors;
+			sourceTree = "<group>";
+		};
 		391264C629DE3DF800664420 /* Platform */ = {
 			isa = PBXGroup;
 			children = (
+				3910767229EB0AD70077A17E /* SecureStorageDelegate */,
 				391264C729DE3E2800664420 /* CGASecureStorage.m */,
 				391264C929E2E5C300664420 /* CGASecureStorage.h */,
-				391264D229E35F4800664420 /* SecureStorageCKDelegate.swift */,
-				393499C329E5436200896019 /* SecureEnclaveInterface.swift */,
 			);
 			path = Platform;
 			sourceTree = "<group>";
@@ -135,6 +153,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				3910767329EB0B190077A17E /* Errors */,
 				391264C629DE3DF800664420 /* Platform */,
 				391264CA29E2E86000664420 /* Utilities */,
 				7AFFD8ED1D35381100E5BB4D /* AppDelegate.h */,
@@ -303,11 +322,12 @@
 			files = (
 				978B8F6F1D3862AE00F588F7 /* AppDelegate.m in Sources */,
 				391264CD29E2E89800664420 /* CGAUtilities.m in Sources */,
-				393499C429E5436200896019 /* SecureEnclaveInterface.swift in Sources */,
+				393499C429E5436200896019 /* KeychainInterface.swift in Sources */,
 				97C146F31CF9000F007C117D /* main.m in Sources */,
+				3910767529EB0B210077A17E /* Errors.swift in Sources */,
 				391264C829DE3E2800664420 /* CGASecureStorage.m in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
-				391264D329E35F4800664420 /* SecureStorageCKDelegate.swift in Sources */,
+				391264D329E35F4800664420 /* SecureStorageDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

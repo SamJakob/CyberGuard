@@ -8,53 +8,18 @@
 import Foundation
 import CryptoKit
 
-/// Describes general errors that may occur within the delegate.
-class CGADelegateError : NSObject, LocalizedError {
+class KeyManipulationError : CGASecurityDelegateError {}
 
-    let message: String;
-
-    override var description: String {
-        get {
-            return "\(String(describing: type(of: self))): \(message)";
-        }
-    }
-
-    var errorDescription: String? {
-        return description;
-    }
-
-    init(message: String) {
-        self.message = message
-    }
-
-}
-
-class KeyManipulationError : CGADelegateError {}
-class EncryptionDecryptionError : CGADelegateError {}
-
-/// Protocol that specifies the conversion interface between a Secure Enclave key and the keychain representation.
-/// Source: Apple Documentatin
-protocol GenericPasswordConvertible: CustomStringConvertible {
-    /// Creates a key from a raw representation.
-    init(rawRepresentation data: Data) throws
-    
-    /// Converts a key to a raw representation of the key.
-    var rawRepresentation: Data { get }
-}
-
-/// Extension on ``SecureEnclave.P256.KeyAgreement.PrivateKey`` to implement the interface defined by ``GenericPasswordConvertible``.
-extension SecureEnclave.P256.KeyAgreement.PrivateKey: GenericPasswordConvertible {
-    public var description: String {
-        return "[Secure Enclave] P256 key"
-    }
-    
-    init(rawRepresentation data: Data) throws {
-        try self.init(dataRepresentation: data)
-    }
-    
-    var rawRepresentation: Data {
-        return dataRepresentation
-    }
+/// Returns the ``kSecAttrApplicationTag`` for a key with the specified name.
+/// The name of the key is unique per-key - as is the tag - and thus there is a one-to-one mapping of name to tag and vice versa.
+///
+/// The mapping is name --> (tag = bundleIdentifier.name).
+///
+/// - Parameter name: The name of the key.
+/// - Returns: The fully qualified tag for the key.
+func getKeyTagForName(_ name: String) -> String {
+    let bundleIdentifier = CGAUtilities.getBundleIdentifier()
+    return "\(bundleIdentifier).\(name)"
 }
 
 /// Deletes any existing keys for the specified account name. Is used by ``storeKey(_:account:singleton:)``
@@ -69,14 +34,11 @@ extension SecureEnclave.P256.KeyAgreement.PrivateKey: GenericPasswordConvertible
 ///   - account: The account name under which to look for keys to delete. Should be a predefined key. As noted above, application bundle identifier is prepended to the specified value.
 ///   - failSilently: If an exception is unnecessary or confusing (e.g., in the case of storeKey), set this to `true` to suppress them (the function will simply exit).
 /// - Throws: ``KeyManipulationError`` if accessing or modifying the keychain fails and `failSilently` is `false`.
-func deleteExistingKeys(account: String, failSilently: Bool = false) throws {
-    let bundleIdentifier = CGAUtilities.getBundleIdentifier()
-    
+func deleteExistingKeys(name: String, failSilently: Bool = false) throws {
     // Create a query that finds all the keys for this app.
     let query = [
-        kSecClass: kSecClassGenericPassword,
-        kSecAttrAccount: "\(bundleIdentifier).\(account)",
-        kSecAttrService: bundleIdentifier
+        kSecClass: kSecClassKey,
+        kSecAttrApplicationTag: getKeyTagForName(name),
     ] as [String: Any]
     
     // Then, perform a deletion with the query and inspect the status.
@@ -91,7 +53,6 @@ func deleteExistingKeys(account: String, failSilently: Bool = false) throws {
             throw KeyManipulationError(message: "We ran into a problem whilst removing existing keys.")
         }
     }
-    
 }
 
 /// Stores a key (which has an implementation of the ``GenericPasswordConvertible`` interface) in the keychain.
@@ -99,74 +60,82 @@ func deleteExistingKeys(account: String, failSilently: Bool = false) throws {
 ///
 /// - Parameters:
 ///   - key: The key to store in the keychain.
-///   - account: The account name to store the key under. Prefer one of the predefined keys.
+///   - name: The name, which will be converted to a tag, to store the key under (see ``getKeyTagForName(_:)``). Prefer one of the predefined keys in SecureStorageDelegate.
 ///   - singleton: Whether the key should be a singleton key. If so, ``deleteExistingKeys(account:failSilently:)`` will be called to clear existing keys.
 /// - Throws: ``KeyManipulationError`` if there's a problem performing a keychain operation.
-func storeKey<T: GenericPasswordConvertible>(_ key: T, account: String, singleton: Bool = false) throws {
-    let bundleIdentifier = CGAUtilities.getBundleIdentifier()
-    
+func storeKey(_ key: SecKey, name: String, singleton: Bool = false) throws {
     if singleton {
-        try deleteExistingKeys(account: account, failSilently: false)
+        try deleteExistingKeys(name: name, failSilently: false)
     }
     
     // Package the key as a generic password.
     let query = [
-        kSecClass: kSecClassGenericPassword,
-        kSecAttrAccount: "\(bundleIdentifier).\(account)",
-        kSecAttrService: bundleIdentifier,
+        kSecClass: kSecClassKey,
+        kSecAttrApplicationTag: getKeyTagForName(name),
         kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
         kSecUseDataProtectionKeychain: true,
         kSecAttrSynchronizable: false,
-        kSecValueData: key.rawRepresentation
+        kSecValueRef: key
     ] as [String: Any]
     
     // Add the key data to the keychain and inspect the resulting status.
     let status = SecItemAdd(query as CFDictionary, nil)
     guard status == errSecSuccess else {
-        throw KeyManipulationError(message: "We couldn't add the data encryption key to your Keychain.")
+        throw KeyManipulationError(message: "We couldn't add the data encryption key to your Keychain. (\(status))")
     }
 }
 
-/// Fetches a **single** key from the keychain with the specified account name (where the account name is formulated
-/// under the same rules as in ``storeKey(_:account:singleton:)``.
+/// Fetches a **single** key from the keychain with the specified name (where the name becomes a key tag and is formulated
+/// under the same rules as in ``storeKey(name:account:singleton:)``.
 ///
 /// Returns the located key on success, or throws an exception if the key is missing or couldn't be read.
 ///
 /// - Parameter account: The account name to look for a key under. Prefer a predefined key.
 /// - Throws: ``KeyManipulationError`` if accessing the keychain failed, or if the key didn't exist.
 /// - Returns: The key.
-func loadKey<T: GenericPasswordConvertible>(account: String) throws -> T {
+func loadKey(name: String) throws -> SecKey {
     let bundleIdentifier = CGAUtilities.getBundleIdentifier()
     
     let query = [
-        kSecClass: kSecClassGenericPassword,
-        kSecAttrAccount: "\(bundleIdentifier).\(account)",
-        kSecAttrService: bundleIdentifier,
+        kSecClass: kSecClassKey,
+        kSecAttrApplicationTag: "\(bundleIdentifier).\(name)",
         kSecMatchLimit: kSecMatchLimitOne,
         kSecUseDataProtectionKeychain: true,
-        kSecReturnData: true
+        kSecReturnRef: true
     ] as [String: Any]
     
     var item: CFTypeRef?
     switch SecItemCopyMatching(query as CFDictionary, &item) {
         case errSecSuccess:
-            guard let data = item as? Data else {
+            if item == nil {
                 throw KeyManipulationError(message: "There was a problem retrieving the data encryption key.")
             }
-            return try T(rawRepresentation: data)
+            
+            return item as! SecKey
         case errSecItemNotFound:
-            throw KeyManipulationError(message: "The data encryption key could not be found.")
+                throw KeyManipulationError(message: "The data encryption key could not be found.")
         case let status: throw KeyManipulationError(message: "There was a problem accessing the data encryption key: \(status.description)")
     }
 }
 
-public extension Data {
-    private static let hexAlphabet = Array("0123456789abcdef".unicodeScalars)
-    func hexStringEncoded() -> String {
-        String(reduce(into: "".unicodeScalars) { result, value in
-            result.append(Self.hexAlphabet[Int(value / 0x10)])
-            result.append(Self.hexAlphabet[Int(value % 0x10)])
-        })
+func hasKey(name: String) throws -> Bool {
+    let bundleIdentifier = CGAUtilities.getBundleIdentifier()
+    
+    let query = [
+        kSecClass: kSecClassKey,
+        kSecAttrApplicationTag: "\(bundleIdentifier).\(name)",
+        kSecMatchLimit: kSecMatchLimitOne,
+        kSecUseDataProtectionKeychain: true,
+        kSecReturnAttributes: true
+    ] as [String: Any]
+    
+    var item: CFTypeRef?
+    switch SecItemCopyMatching(query as CFDictionary, &item) {
+        case errSecSuccess:
+            return true
+        case errSecItemNotFound:
+            return false
+        default: throw KeyManipulationError(message: "There was a problem accessing the Keychain.")
     }
 }
 

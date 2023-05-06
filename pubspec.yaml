@@ -28,6 +28,8 @@ dependencies:
       url: https://github.com/SamJakob/heroicons.git
       ref: master
   flex_color_scheme: ^7.0.0
+  rive: ^0.10.4
+  flare_flutter: ^3.0.2
 
   ### STATE MANAGEMENT
   get_it: ^7.2.0
@@ -36,7 +38,7 @@ dependencies:
   hooks_riverpod: ^2.1.3
 
   ### PRODUCTION
-  flutter_launcher_icons: ^0.12.0
+  flutter_launcher_icons: ^0.13.1
   package_info_plus: ^3.0.3
 
 dev_dependencies:
@@ -49,6 +51,11 @@ dev_dependencies:
 flutter:
   # Load Material Design icons.
   uses-material-design: true
+
+  # Load assets.
+  assets:
+    - res/flare/loader.flr
+    - res/rive/cyberguard-loader.riv
 
   # Add custom fonts.
   fonts:
@@ -77,3 +84,16 @@ flutter:
         - asset: "assets/fonts/SourceSansPro-BlackItalic.ttf"
           weight: 900
           style: italic
+
+flutter_launcher_icons:
+  image_path: "assets/images/cg-icon.png"
+
+  ios: true
+  remove_alpha_ios: true
+
+  # Android has manual alterations. Set this to true if you wish to totally
+  # replace the Android launcher icon and the relevant configuration.
+  android: false
+  min_sdk_android: 23
+  adaptive_icon_background: "#8E61F0"
+  adaptive_icon_foreground: "assets/images/cg-icon-fg.png"

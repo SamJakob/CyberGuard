@@ -1,4 +1,6 @@
 import 'package:cyberguard/const/branding.dart';
+import 'package:cyberguard/data/storage/accounts.dart';
+import 'package:cyberguard/domain/error.dart';
 import 'package:cyberguard/interface/screens/root.dart';
 import 'package:cyberguard/interface/screens/root/accounts.dart';
 import 'package:cyberguard/interface/screens/root/connections.dart';
@@ -21,12 +23,14 @@ final _router = GoRouter(
   routes: <RouteBase>[
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
-      builder: (final context, final state, final child) => RootScreen(child: child),
+      builder: (final context, final state, final child) =>
+          RootScreen(child: child),
       routes: [
         GoRoute(
           path: '/',
           parentNavigatorKey: _shellNavigatorKey,
-          pageBuilder: (final context, final state) => RootScreen.createTabPageBuilder(context, state, HomeScreen()),
+          pageBuilder: (final context, final state) =>
+              RootScreen.createTabPageBuilder(context, state, HomeScreen()),
           routes: [
             GoRoute(
               path: 'settings',
@@ -39,19 +43,31 @@ final _router = GoRouter(
           path: '/accounts',
           parentNavigatorKey: _shellNavigatorKey,
           pageBuilder: (final context, final state) =>
-              RootScreen.createTabPageBuilder(context, state, AccountsScreen()),
+              RootScreen.createTabPageBuilder(
+            context,
+            state,
+            AccountsScreen(),
+          ),
         ),
         GoRoute(
           path: '/connections',
           parentNavigatorKey: _shellNavigatorKey,
           pageBuilder: (final context, final state) =>
-              RootScreen.createTabPageBuilder(context, state, const ConnectionsScreen()),
+              RootScreen.createTabPageBuilder(
+            context,
+            state,
+            const ConnectionsScreen(),
+          ),
         ),
         GoRoute(
           path: '/multi-factor',
           parentNavigatorKey: _shellNavigatorKey,
           pageBuilder: (final context, final state) =>
-              RootScreen.createTabPageBuilder(context, state, const MultiFactorScreen()),
+              RootScreen.createTabPageBuilder(
+            context,
+            state,
+            const MultiFactorScreen(),
+          ),
         )
       ],
     ),
@@ -85,7 +101,32 @@ class CGApp extends StatelessWidget {
         themeAnimationDuration: const Duration(milliseconds: 250),
         routerConfig: _router,
         builder: (final BuildContext context, final Widget? child) {
-          return InterfaceProtector(interfaceBuilder: (final BuildContext context) => child!);
+          return InterfaceProtector(
+            interfaceBuilder: (final BuildContext context) => child!,
+            initializeApp: (final BuildContext context) async {
+              final accountStorage = AccountStorageService();
+              await accountStorage.initialize().catchError((final dynamic e) {
+                String? message;
+                if (e is CGSecurityCompatibilityError) {
+                  message = e.reason;
+                } else {
+                  message =
+                      "Your device's operating system does not appear to be compatible with CyberGuard.";
+                }
+
+                InterfaceProtectorMessenger.of(context).insertBlurOverlay(
+                  InterfaceProtectorOverlays.compatibilityFail.copyWith(
+                    additionalInformation: message,
+                  ),
+                  blockChanges: true,
+                  shouldThrowOnFailure: true,
+                  overrideLoading: true,
+                );
+              });
+
+              await accountStorage.test();
+            },
+          );
         },
       ),
     );

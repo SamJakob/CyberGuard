@@ -15,7 +15,7 @@
 @property (nonatomic, retain) FlutterMethodChannel* _Nonnull channel;
 
 /**
- * Allocates a FlutterMethodChannel
+ * Allocates a ``CGASecureStoragePlatformHandler`` implementation for the Platform Channel interface.
  */
 + (CGASecureStoragePlatformHandler* _Nonnull) bind:(FlutterViewController* _Nonnull) controller withName:(NSString* _Nonnull) name;
 
