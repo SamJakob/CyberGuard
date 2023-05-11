@@ -1,6 +1,9 @@
 import 'package:cyberguard/const/branding.dart';
 import 'package:cyberguard/data/storage/accounts.dart';
+import 'package:cyberguard/data/struct/account.dart';
 import 'package:cyberguard/domain/error.dart';
+import 'package:cyberguard/domain/providers/account.dart';
+import 'package:cyberguard/interface/screens/account.dart';
 import 'package:cyberguard/interface/screens/root.dart';
 import 'package:cyberguard/interface/screens/root/accounts.dart';
 import 'package:cyberguard/interface/screens/root/connections.dart';
@@ -8,10 +11,13 @@ import 'package:cyberguard/interface/screens/root/home.dart';
 import 'package:cyberguard/interface/screens/root/multi_factor.dart';
 import 'package:cyberguard/interface/screens/settings.dart';
 import 'package:cyberguard/interface/utility/interface_protector.dart';
+import 'package:cyberguard/locator.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 // The navigator keys and router configuration
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -35,7 +41,7 @@ final _router = GoRouter(
             GoRoute(
               path: 'settings',
               parentNavigatorKey: _rootNavigatorKey,
-              builder: (final context, final state) => const SettingsScreen(),
+              builder: (final context, final state) => SettingsScreen(),
             ),
           ],
         ),
@@ -43,11 +49,16 @@ final _router = GoRouter(
           path: '/accounts',
           parentNavigatorKey: _shellNavigatorKey,
           pageBuilder: (final context, final state) =>
-              RootScreen.createTabPageBuilder(
-            context,
-            state,
-            AccountsScreen(),
-          ),
+              RootScreen.createTabPageBuilder(context, state, AccountsScreen()),
+          routes: [
+            GoRoute(
+              path: ':account',
+              parentNavigatorKey: _rootNavigatorKey,
+              builder: (final context, final state) => AccountScreen(
+                id: state.pathParameters['account']!,
+              ),
+            ),
+          ],
         ),
         GoRoute(
           path: '/connections',
@@ -102,10 +113,12 @@ class CGApp extends StatelessWidget {
         routerConfig: _router,
         builder: (final BuildContext context, final Widget? child) {
           return InterfaceProtector(
-            interfaceBuilder: (final BuildContext context) => child!,
-            initializeApp: (final BuildContext context) async {
+            initializeApp: (final BuildContext context,
+                final InterfaceProtectorMessenger interfaceProtector) async {
               final accountStorage = AccountStorageService();
               await accountStorage.initialize().catchError((final dynamic e) {
+                if (kDebugMode) print(e);
+
                 String? message;
                 if (e is CGSecurityCompatibilityError) {
                   message = e.reason;
@@ -114,7 +127,7 @@ class CGApp extends StatelessWidget {
                       "Your device's operating system does not appear to be compatible with CyberGuard.";
                 }
 
-                InterfaceProtectorMessenger.of(context).insertBlurOverlay(
+                interfaceProtector.insertBlurOverlay(
                   InterfaceProtectorOverlays.compatibilityFail.copyWith(
                     additionalInformation: message,
                   ),
@@ -124,7 +137,20 @@ class CGApp extends StatelessWidget {
                 );
               });
 
-              await accountStorage.test();
+              locator.registerSingleton<AccountStorageService>(accountStorage);
+              return await accountStorage.load();
+            },
+            interfaceBuilder: (final BuildContext context, final dynamic data) {
+              return ProviderScope(
+                overrides: [
+                  accountProvider.overrideWith(
+                    (final ref) => AccountsNotifier(
+                      initialAccounts: data as Map<String, Account>?,
+                    ),
+                  )
+                ],
+                child: child!,
+              );
             },
           );
         },

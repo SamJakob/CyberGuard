@@ -26,4 +26,14 @@
  */
 + (NSString* _Nonnull) getBundleName;
 
+/**
+ * Wrapper around UIKit to get the system name.
+ */
++ (NSString* _Nonnull) getSystemName;
+
+/**
+ * Wrapper around UIKit to get the system version.
+ */
++ (NSString* _Nonnull) getSystemVersion;
+
 @end

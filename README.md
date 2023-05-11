@@ -8,7 +8,7 @@ A protected, mobile, account manager that enables
   - [`const/`](./lib/const) - Compile-time settings for application (configuration)
   - [`domain/`](./lib/domain) - Application domain code (essentially, business logic)
     - [`data/`](./lib/domain/data) - Data layer - generally intended for use by services layer - might request data from REST APIs, or local filesystem, for example.
-    - [`services/`](./lib/domain/services) - Classes that uniformly expose specialized features.
+    - [`services/`](./lib/domain/providers) - Classes that uniformly expose specialized features.
     - [`struct/`](./lib/domain/struct) - Classes that represent individual models (entities) within the system.
   - [`interface/`](./lib/interface) - All user-interface related code.
     - [`components/`](./lib/interface/components) - Non-application specific custom components (widgets, generalized such that they may be copied between applications).

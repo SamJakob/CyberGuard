@@ -6,6 +6,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 #import "CGAUtilities.h"
 
@@ -21,6 +22,14 @@
 
 + (NSString* _Nonnull) getBundleName {
     return [[CGAUtilities getBundleInfo] objectForKey:@"CFBundleDisplayName"];
+}
+
++ (NSString* _Nonnull) getSystemName {
+    return [UIDevice currentDevice].systemName;
+}
+
++ (NSString* _Nonnull) getSystemVersion {
+    return [UIDevice currentDevice].systemVersion;
 }
 
 @end

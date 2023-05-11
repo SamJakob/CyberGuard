@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:clock/clock.dart';
 import 'package:cyberguard/data/struct/access_method.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,9 +8,9 @@ void main() {
   /// DateTime.now() the instant execution has started.
   /// Used to track values that should be created (relative to)
   /// the current date/time.
-  final executionInstant = DateTime.now();
+  final executionInstant = DateTime.now().toUtc();
   final previousExecutionInstant =
-      DateTime.now().subtract(const Duration(seconds: 3));
+      DateTime.now().toUtc().subtract(const Duration(seconds: 3));
 
   group("test access method", () {
     test("access method sub classes instantiate correctly", () {
@@ -32,7 +34,7 @@ void main() {
         expect(method.hasAccessMethods, equals(false));
         expect(method.methods, equals(null));
 
-        late KnowledgeAccessMethod<String> subMethod;
+        late KnowledgeAccessMethod subMethod;
         withClock(Clock.fixed(previousExecutionInstant), () {
           subMethod = KnowledgeAccessMethod('1234', label: 'Cell Phone PIN');
         });
@@ -62,10 +64,10 @@ void main() {
       // Define a hypothetical 'Google Account' structure.
 
       AccessMethodConjunction conjunction;
-      KnowledgeAccessMethod<String> password;
+      KnowledgeAccessMethod password;
       TemporalAccessMethod smsCode;
       PhysicalAccessMethod cellPhone;
-      KnowledgeAccessMethod<String> cellPhonePin;
+      KnowledgeAccessMethod cellPhonePin;
 
       var googleAccountRequirements = AccessMethodTree({
         conjunction = AccessMethodConjunction({
@@ -91,7 +93,7 @@ void main() {
 
       // Now define a new access method, add it to the existing
       // structure, and ensure everything is still valid.
-      KnowledgeAccessMethod<String> securityKeyPin;
+      KnowledgeAccessMethod securityKeyPin;
       PhysicalAccessMethod securityKey = PhysicalAccessMethod(
         label: 'Security Key',
         methods: {
@@ -118,7 +120,7 @@ void main() {
 
     test('priority (when adding, deleting and re-adding) works correctly', () {
       AccessMethodConjunction conjunction;
-      KnowledgeAccessMethod<String> password;
+      KnowledgeAccessMethod password;
       TemporalAccessMethod smsCode;
 
       // Partial snippet of the above example.
@@ -179,7 +181,7 @@ void main() {
   group("test exceptions", () {
     test('re-adding element already in tree should throw error', () {
       AccessMethodConjunction conjunction;
-      KnowledgeAccessMethod<String> password;
+      KnowledgeAccessMethod password;
       TemporalAccessMethod smsCode;
 
       // Partial snippet of the above example.
@@ -215,6 +217,55 @@ void main() {
       expect(
         () => conjunction.methods.add(smsCode.clone()),
         returnsNormally,
+      );
+    });
+  });
+
+  group('test serialization and deserialization', () {
+    AccessMethodConjunction conjunction;
+    KnowledgeAccessMethod password;
+    TemporalAccessMethod smsCode;
+    PhysicalAccessMethod cellPhone;
+    KnowledgeAccessMethod cellPhonePin;
+
+    late AccessMethodTree googleAccountRequirements;
+
+    setUp(() {
+      googleAccountRequirements = AccessMethodTree({
+        conjunction = AccessMethodConjunction({
+          password = KnowledgeAccessMethod('mypassword', label: 'Password'),
+          smsCode = TemporalAccessMethod(
+              label: 'SMS Two-Factor Authentication Code',
+              methods: {
+                cellPhone = PhysicalAccessMethod(label: 'Cell Phone', methods: {
+                  cellPhonePin =
+                      KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
+                }),
+              }),
+        }),
+      });
+    });
+
+    test('test serializes without error', () {
+      // Define a hypothetical 'Google Account' structure.
+      googleAccountRequirements.pack();
+    });
+
+    test('test deserializes without error', () {
+      Uint8List data = googleAccountRequirements.pack();
+      expect(AccessMethodTree.unpack(data)!, isA<AccessMethodTree>());
+    });
+
+    test('representation matches before and after re-serialization', () {
+      Uint8List data = googleAccountRequirements.pack();
+      AccessMethodTree deserialized = AccessMethodTree.unpack(data)!;
+
+      // toString provides an adequate summary of the structure, so
+      // simply comparing these ensures that all of the pertinent
+      // information is being serialized and deserialized correctly.
+      expect(
+        googleAccountRequirements.toString(),
+        equals(deserialized.toString()),
       );
     });
   });

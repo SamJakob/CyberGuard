@@ -10,16 +10,16 @@ import android.security.keystore.KeyProperties;
 import androidx.annotation.NonNull;
 import androidx.biometric.BiometricPrompt;
 
-import com.google.crypto.tink.Aead;
-import com.google.crypto.tink.Registry;
-import com.google.crypto.tink.aead.AeadConfig;
-import com.google.crypto.tink.aead.AeadKeyTemplates;
-import com.google.crypto.tink.hybrid.subtle.AeadOrDaead;
-import com.google.crypto.tink.proto.AesGcmKey;
-import com.google.crypto.tink.shaded.protobuf.ByteString;
-import com.google.crypto.tink.subtle.EciesAeadHkdfDemHelper;
-import com.google.crypto.tink.subtle.EciesAeadHkdfHybridEncrypt;
-import com.google.crypto.tink.subtle.EllipticCurves;
+//import com.google.crypto.tink.Aead;
+//import com.google.crypto.tink.Registry;
+//import com.google.crypto.tink.aead.AeadConfig;
+//import com.google.crypto.tink.aead.AeadKeyTemplates;
+//import com.google.crypto.tink.hybrid.subtle.AeadOrDaead;
+//import com.google.crypto.tink.proto.AesGcmKey;
+//import com.google.crypto.tink.shaded.protobuf.ByteString;
+//import com.google.crypto.tink.subtle.EciesAeadHkdfDemHelper;
+//import com.google.crypto.tink.subtle.EciesAeadHkdfHybridEncrypt;
+//import com.google.crypto.tink.subtle.EllipticCurves;
 import com.samjakob.cyberguard.BuildConfig;
 import com.samjakob.cyberguard.MainActivity;
 import com.samjakob.cyberguard.errors.SecureStorageDelegateError;
@@ -156,18 +156,20 @@ public class HybridECEncryption implements EncryptionScheme {
         @NonNull String keyName,
         byte[] data
     ) {
+
         HybridECEncryption.appKeyStore = appKeyStore;
         HybridECEncryption.keyName = keyName;
 
         try {
             ECPublicKey publicKey = (ECPublicKey) appKeyStore.getCertificate(keyName).getPublicKey();
-            return new EciesAeadHkdfHybridEncrypt(
-                publicKey,
-                new byte[]{},
-                "HmacSha256",
-                EllipticCurves.PointFormatType.UNCOMPRESSED,
-                new CyberGuardAESGCM128EciesAeadHkdfDemHelper()
-            ).encrypt(data, generateContextInfo(keyName));
+//            return new EciesAeadHkdfHybridEncrypt(
+//                publicKey,
+//                new byte[]{},
+//                "HmacSha256",
+//                EllipticCurves.PointFormatType.UNCOMPRESSED,
+//                new CyberGuardAESGCM128EciesAeadHkdfDemHelper()
+//            ).encrypt(data, generateContextInfo(keyName));
+            throw new NotImplementedError();
         } catch (Exception ex) {
             if (BuildConfig.DEBUG) ex.printStackTrace();
             throw new SecureStorageDelegateError("Failed to encrypt data.");
@@ -176,7 +178,7 @@ public class HybridECEncryption implements EncryptionScheme {
 
     @NonNull
     @Override
-    public byte[] decrypt(BiometricPrompt.CryptoObject cryptoObject, byte[] data) {
+    public byte[] decrypt(@NonNull BiometricPrompt.CryptoObject cryptoObject, byte[] data) {
         try {
             ECKey privateKey = (ECKey) appKeyStore.getKey(keyName, null);
 
@@ -229,29 +231,29 @@ public class HybridECEncryption implements EncryptionScheme {
         return String.format("CyberGuard_SJAB$%s", keyName).getBytes(StandardCharsets.UTF_8);
     }
 
-    private static class CyberGuardAESGCM128EciesAeadHkdfDemHelper implements EciesAeadHkdfDemHelper {
-        private final AesGcmKey key;
-
-        CyberGuardAESGCM128EciesAeadHkdfDemHelper() throws GeneralSecurityException {
-            this.key = (AesGcmKey) Registry.newKey(AeadKeyTemplates.AES128_GCM);
-        }
-
-        @Override
-        public int getSymmetricKeySizeInBytes() {
-            return 16;
-        }
-
-        @Override
-        public AeadOrDaead getAeadOrDaead(byte[] symmetricKeyValue) throws GeneralSecurityException {
-            if (symmetricKeyValue.length != 16) throw new GeneralSecurityException("Invalid or corrupted encryption key.");
-
-            AesGcmKey aeadKey = AesGcmKey.newBuilder()
-                    .mergeFrom(key)
-                    .setKeyValue(ByteString.copyFrom(symmetricKeyValue, 0, 16))
-                    .build();
-
-            return new AeadOrDaead(Registry.getPrimitive(AeadConfig.AES_GCM_TYPE_URL, aeadKey, Aead.class));
-        }
-    }
+//    private static class CyberGuardAESGCM128EciesAeadHkdfDemHelper implements EciesAeadHkdfDemHelper {
+//        private final AesGcmKey key;
+//
+//        CyberGuardAESGCM128EciesAeadHkdfDemHelper() throws GeneralSecurityException {
+//            this.key = (AesGcmKey) Registry.newKey(AeadKeyTemplates.AES128_GCM);
+//        }
+//
+//        @Override
+//        public int getSymmetricKeySizeInBytes() {
+//            return 16;
+//        }
+//
+//        @Override
+//        public AeadOrDaead getAeadOrDaead(byte[] symmetricKeyValue) throws GeneralSecurityException {
+//            if (symmetricKeyValue.length != 16) throw new GeneralSecurityException("Invalid or corrupted encryption key.");
+//
+//            AesGcmKey aeadKey = AesGcmKey.newBuilder()
+//                    .mergeFrom(key)
+//                    .setKeyValue(ByteString.copyFrom(symmetricKeyValue, 0, 16))
+//                    .build();
+//
+//            return new AeadOrDaead(Registry.getPrimitive(AeadConfig.AES_GCM_TYPE_URL, aeadKey, Aead.class));
+//        }
+//    }
 
 }

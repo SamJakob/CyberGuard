@@ -1,16 +1,21 @@
+import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/interface/partials/root_app_bar.dart';
-import 'package:cyberguard/interface/pages/new_account.dart';
+import 'package:cyberguard/interface/pages/add_account.dart';
 import 'package:cyberguard/interface/utility/context.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class AccountsScreen extends StatelessWidget {
+class AccountsScreen extends ConsumerWidget {
   final ScrollController _scrollController = ScrollController();
 
   AccountsScreen({final Key? key}) : super(key: key);
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final List<AccountRef> accounts = ref.watch(accountProvider).allAccounts;
+
     return Stack(
       children: [
         Scrollbar(
@@ -43,11 +48,17 @@ class AccountsScreen extends StatelessWidget {
               ),
               SliverFixedExtentList(
                 itemExtent: 50.0,
-                delegate: SliverChildBuilderDelegate((final context, final index) {
-                  return Center(
-                    child: Text("item $index"),
-                  );
-                }),
+                delegate: SliverChildBuilderDelegate(
+                  childCount: accounts.length,
+                  (final context, final index) {
+                    return ListTile(
+                      title: Text("${accounts[index]}"),
+                      onTap: () {
+                        context.go("/accounts/${accounts[index].id}");
+                      },
+                    );
+                  },
+                ),
               )
             ],
           ),
@@ -59,7 +70,7 @@ class AccountsScreen extends StatelessWidget {
             onPressed: () {
               showModalBottomSheet<void>(
                 context: context,
-                builder: (final BuildContext context) => const NewAccountPage(),
+                builder: (final BuildContext context) => const AddAccountPage(),
               );
             },
             label: const Text("Add Account"),

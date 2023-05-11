@@ -28,6 +28,9 @@ public abstract class SecureStorageDelegate {
     public abstract String getDelegateName();
     @NonNull
     public abstract String getEncryptionSchemeName();
+
+    @NonNull
+    public abstract String getStorageLocation();
     public abstract void generateKey(@Nullable String name, boolean overwriteIfExists);
     public abstract void deleteKey(@Nullable String name);
     public abstract byte[] encrypt(@Nullable String keyName, byte[] data);

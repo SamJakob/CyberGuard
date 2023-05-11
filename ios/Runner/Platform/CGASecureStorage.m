@@ -60,22 +60,49 @@
         result(@{
             @"ping": @"pong",
             
-            @"platform": @"Darwin (iOS)",
-            @"version": @(CHANNEL_IMPL_VERSION),
             @"is_simulator": [NSNumber numberWithBool:TARGET_OS_SIMULATOR == 1],
+            @"platform": [NSString stringWithFormat:@"Darwin (%@)", [CGAUtilities getSystemName]],
+            @"platform_version": [CGAUtilities getSystemVersion],
             
-            @"has_enhanced_security": @([CGASecureStorageDelegate deviceHasSecureEnclave])
+            @"version": @(CHANNEL_IMPL_VERSION),
+            @"has_enhanced_security": @([CGASecureStorageDelegate deviceHasSecureEnclave] ? 0 : 2)
         });
     }
     
     /// Returns the storage location for encrypted files.
     METHOD_CHANNEL_HANDLER(@"getStorageLocation") {
-        result(NSHomeDirectory());
+        // Check storagePath exists.
+        NSError* error;
+        FlutterError* appStorageError = [FlutterError errorWithCode:@"STORAGE_LOCATION_FAILURE"
+                                                            message:@"There was a problem preparing app storage."
+                                                            details:nil];
+        
+        // Fetch the storage location from the file manager.
+        NSFileManager* fileManager = [NSFileManager defaultManager];
+        NSURL* storageLocation = [fileManager URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:true error:&error];
+        
+        if (error != nil) {
+            return result(appStorageError);
+        }
+        
+        // Exclude the application support directory from backups.
+        [storageLocation setResourceValue:@(true) forKey:NSURLIsExcludedFromBackupKey error:&error];
+        
+        if (error != nil) {
+            return result(appStorageError);
+        }
+        
+        // Finally return the storage path.
+        return result([storageLocation path]);
     }
     
     /// Returns true if enhanced security status is available (i.e., in the presence of a Secure Enclave), otherwise false.
     METHOD_CHANNEL_HANDLER(@"enhancedSecurityStatus") {
-        result(@([CGASecureStorageDelegate deviceHasSecureEnclave]));
+        return result(@{
+            // Return either status 0 (enhanced security available) in the presence of a Secure Enclave
+            // or return status 2 (unavailable) if it's not present.
+            @"status": @([CGASecureStorageDelegate deviceHasSecureEnclave] ? 0 : 2),
+        });
     }
     
     /// Checks if a key with the specified name exists in the device keychain. Returns true if it does, otherwise false.
@@ -97,7 +124,7 @@
                                               details:nil]);
         }
         
-        result(@([wrapper status] == CGAKeyExistsStatusFound));
+        return result(@([wrapper status] == CGAKeyExistsStatusFound));
     }
     
     /// Generates a new key with the specified name. If the key already exists, this does nothing unless `overwriteIfExists` is set to true,

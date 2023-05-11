@@ -14,6 +14,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  ### SECURITY
+  crypto: ^3.0.3
+
   ### UNIT TESTING
   meta: ^1.8.0
   clock: ^1.1.1 # Creates 'mockable' clock that can be manipulated in tests.
@@ -21,25 +24,26 @@ dependencies:
   ### UTILITY
   vector_math: ^2.1.4
   auto_size_text: ^3.0.0
+  uuid: ^3.0.7
+  url_launcher: ^6.1.10
+  async: ^2.10.0
+  messagepack: ^0.2.1
 
   ### USER INTERFACE
-  heroicons:
-    git:
-      url: https://github.com/SamJakob/heroicons.git
-      ref: master
-  flex_color_scheme: ^7.0.0
+  heroicons: ^0.8.0
+  flex_color_scheme: ^7.0.5
   rive: ^0.10.4
   flare_flutter: ^3.0.2
 
   ### STATE MANAGEMENT
-  get_it: ^7.2.0
-  go_router: ^6.0.1
+  get_it: ^7.4.1
+  go_router: ^7.0.0
   flutter_hooks: ^0.18.0
-  hooks_riverpod: ^2.1.3
+  hooks_riverpod: ^2.3.6
 
   ### PRODUCTION
   flutter_launcher_icons: ^0.13.1
-  package_info_plus: ^3.0.3
+  package_info_plus: ^3.1.2
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +60,7 @@ flutter:
   assets:
     - res/flare/loader.flr
     - res/rive/cyberguard-loader.riv
+    - assets/images/cg-icon.png
 
   # Add custom fonts.
   fonts:

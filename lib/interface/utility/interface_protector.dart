@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:cyberguard/const/branding.dart';
 import 'package:cyberguard/interface/components/cyberguard_loading_icon.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:heroicons/heroicons.dart';
@@ -44,21 +45,13 @@ class InterfaceProtectorOverlays {
 }
 
 class InterfaceProtectorMessenger {
-  final BuildContext _context;
+  final _InterfaceProtectorState? _state;
 
   InterfaceProtectorMessenger.of(final BuildContext context)
-      : _context = context;
+      : _state = context.findAncestorStateOfType<_InterfaceProtectorState>();
 
-  _InterfaceProtectorState? _locateInterfaceProtectorState() {
-    return _context.findAncestorStateOfType<_InterfaceProtectorState>();
-  }
-
-  /// Checks if the [InterfaceProtectorMessenger] is able to contact a mounted
-  /// [InterfaceProtector]. Returns true if there is one in the widget tree,
-  /// otherwise false.
-  bool isMounted() {
-    return _locateInterfaceProtectorState() != null;
-  }
+  InterfaceProtectorMessenger._withState(final _InterfaceProtectorState state)
+      : _state = state;
 
   /// Attempts to insert the specified overlay into the [InterfaceProtector], if it
   /// is mounted. Otherwise, does nothing. Specify [shouldThrowOnFailure] if this
@@ -73,22 +66,25 @@ class InterfaceProtectorMessenger {
     final bool shouldThrowOnFailure = false,
     final bool overrideLoading = false,
   }) {
-    final state = _locateInterfaceProtectorState();
-    if (state == null && shouldThrowOnFailure) {
+    if (_state == null && shouldThrowOnFailure) {
       throw StateError("Failed to locate InterfaceProtector.");
     }
 
-    if (overrideLoading) state?.setLoading(false);
-    state?.addOverlay(overlay.toOverlayEntry());
-    if (blockChanges) state?._changesBlocked = true;
+    if (overrideLoading) _state?.setLoading(false);
+    _state?.addOverlay(overlay.toOverlayEntry());
+    if (blockChanges) _state?._changesBlocked = true;
   }
 }
 
+typedef InterfaceBuilder = Widget Function(
+    BuildContext context, dynamic initializationData);
+
 class InterfaceProtector extends StatefulWidget {
   /// A builder that renders the application's interface.
-  final WidgetBuilder interfaceBuilder;
+  final InterfaceBuilder interfaceBuilder;
 
-  final Future<void> Function(BuildContext)? initializeApp;
+  final Future<dynamic> Function(BuildContext, InterfaceProtectorMessenger)?
+      initializeApp;
 
   const InterfaceProtector({
     final Key? key,
@@ -100,12 +96,14 @@ class InterfaceProtector extends StatefulWidget {
   State<InterfaceProtector> createState() => _InterfaceProtectorState();
 }
 
+enum _InterfaceState { uninitialized, initializing, initialized, error }
+
 class _InterfaceProtectorState extends State<InterfaceProtector>
     with WidgetsBindingObserver {
   final GlobalKey<OverlayState> overlayKey = GlobalKey<OverlayState>();
 
   bool _changesBlocked = false;
-  bool _initialized = false;
+  _InterfaceState _initializationState = _InterfaceState.uninitialized;
 
   bool _loading = true;
 
@@ -165,6 +163,47 @@ class _InterfaceProtectorState extends State<InterfaceProtector>
 
   @override
   Widget build(final BuildContext context) {
+    dynamic initializationResult;
+
+    if (_initializationState == _InterfaceState.uninitialized) {
+      _initializationState = _InterfaceState.initializing;
+
+      WidgetsBinding.instance.addPostFrameCallback((final _) async {
+        if (widget.initializeApp != null) {
+          setLoading(true);
+          try {
+            initializationResult = await widget.initializeApp!(
+              context,
+              InterfaceProtectorMessenger._withState(this),
+            );
+            setState(() {
+              _initializationState = _InterfaceState.initialized;
+            });
+            setLoading(false);
+          } catch (ex) {
+            if (kDebugMode) print(ex);
+
+            setState(() {
+              _initializationState = _InterfaceState.error;
+            });
+            setLoading(false);
+
+            BlurOverlay failOverlay = InterfaceProtectorOverlays.decryptionFail;
+
+            if (ex is PlatformException) {
+              if (ex.details != null) {
+                failOverlay = failOverlay.copyWith(
+                  additionalInformation: ex.details!.toString(),
+                );
+              }
+            }
+
+            addOverlay(failOverlay.toOverlayEntry());
+          }
+        }
+      });
+    }
+
     // Insert a custom overlay, used to blur the child (i.e., the application interface).
     return Overlay(
       key: overlayKey,
@@ -172,38 +211,15 @@ class _InterfaceProtectorState extends State<InterfaceProtector>
         OverlayEntry(
           maintainState: true,
           builder: (final BuildContext context) {
-            if (!_initialized) {
-              _initialized = true;
-
-              WidgetsBinding.instance.addPostFrameCallback((final _) async {
-                if (widget.initializeApp != null) {
-                  setLoading(true);
-                  try {
-                    await widget.initializeApp!(context);
-                    setLoading(false);
-                  } catch (ex) {
-                    setLoading(false);
-
-                    BlurOverlay failOverlay =
-                        InterfaceProtectorOverlays.decryptionFail;
-
-                    if (ex is PlatformException) {
-                      if (ex.details != null) {
-                        failOverlay = failOverlay.copyWith(
-                          additionalInformation: ex.details!.toString(),
-                        );
-                      }
-                    }
-
-                    addOverlay(
-                      failOverlay.toOverlayEntry(),
-                    );
-                  }
-                }
-              });
+            // Show a black screen on the interface entry in the widget tree
+            // until the application is initialized.
+            // The loader will be overlayed on top of this.
+            if ([_InterfaceState.uninitialized, _InterfaceState.initializing]
+                .contains(_initializationState)) {
+              return Container(color: Colors.black);
+            } else {
+              return widget.interfaceBuilder(context, initializationResult);
             }
-
-            return widget.interfaceBuilder(context);
           },
         ),
         _loaderOverlay,
@@ -244,6 +260,14 @@ class LoaderOverlay {
                 children: [
                   const CyberGuardLoadingIcon(),
                   const SizedBox(height: 20),
+                  const Text(
+                    "CYBERGUARD",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   Text(
                     message,
                     textAlign: TextAlign.center,

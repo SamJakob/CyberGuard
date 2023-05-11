@@ -3,6 +3,7 @@ package com.samjakob.cyberguard.platform.secure_storage_delegate.scheme;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.security.KeyStoreException;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyInfo;
 import android.security.keystore.KeyProperties;
@@ -22,14 +23,18 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.spec.MGF1ParameterSpec;
 import java.util.Arrays;
 import java.util.Random;
 
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
 
 public interface EncryptionScheme {
@@ -42,7 +47,7 @@ public interface EncryptionScheme {
     @NonNull
     byte[] encrypt(@NonNull KeyStore appKeyStore, @NonNull String keyName, byte[] data);
     @NonNull
-    byte[] decrypt(BiometricPrompt.CryptoObject cryptoObject, byte[] data);
+    byte[] decrypt(@NonNull BiometricPrompt.CryptoObject cryptoObject, byte[] data);
 
     /**
      * Used to perform a test of the {@link #encrypt(KeyStore, String, byte[])} and
@@ -88,7 +93,10 @@ public interface EncryptionScheme {
         String transformation
     ) {
         final String TEST_KEY_ALIAS = "TEMPORARY_TEST_KEY";
-        final String TEST_KEY_PAYLOAD = "Howdy, pardner!";
+        final byte[] TEST_PAYLOAD = new byte[112];
+        for (int i = 0; i < TEST_PAYLOAD.length; i++) {
+            TEST_PAYLOAD[i] = (byte) i;
+        }
 
         try {
             // Generate a simple key that is similar to that used by the implementation.
@@ -122,7 +130,7 @@ public interface EncryptionScheme {
 
             // Get and verify the key information.
             // (e.g., ensure the device actually did generate the key with a secure module).
-            KeyFactory factory = KeyFactory.getInstance(ephemeralTestKeyPair.getPrivate().getAlgorithm());
+            KeyFactory factory = KeyFactory.getInstance(ephemeralTestKeyPair.getPrivate().getAlgorithm(), "AndroidKeyStore");
             KeyInfo keyInfo = factory.getKeySpec(ephemeralTestKeyPair.getPrivate(), KeyInfo.class);
 
             boolean isSecureKey;
@@ -144,16 +152,30 @@ public interface EncryptionScheme {
 
             // Create encryption cipher.
             Cipher cipher = Cipher.getInstance(transformation);
-            cipher.init(Cipher.ENCRYPT_MODE, ephemeralTestKeyPair.getPublic());
-            byte[] encrypted = cipher.doFinal(TEST_KEY_PAYLOAD.getBytes(StandardCharsets.UTF_8));
+            cipher.init(Cipher.ENCRYPT_MODE, ephemeralTestKeyPair.getPublic(), new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT));
+            byte[] encrypted = cipher.doFinal(TEST_PAYLOAD);
 
             // Create decryption cipher.
             cipher = Cipher.getInstance(transformation);
-            cipher.init(Cipher.DECRYPT_MODE, ephemeralTestKeyPair.getPrivate());
+            cipher.init(Cipher.DECRYPT_MODE, ephemeralTestKeyPair.getPrivate(), new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT));
 
             // Perform final decryption and compare it to the original payload.
-            if (!new String(cipher.doFinal(encrypted)).equals(TEST_KEY_PAYLOAD)) {
-                throw new GeneralSecurityException("The test decryption failed.");
+            try {
+                if (!Arrays.equals(cipher.doFinal(encrypted), TEST_PAYLOAD)) {
+                    throw new GeneralSecurityException("The test decryption failed.");
+                }
+            } catch (Exception ex) {
+                if (ex instanceof IllegalBlockSizeException) {
+                    Throwable cause = ex.getCause();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (cause instanceof KeyStoreException) {
+                            KeyStoreException keyStoreCause = (KeyStoreException) cause;
+                            System.err.println(keyStoreCause.getNumericErrorCode());
+                        }
+                    }
+                }
+                ex.printStackTrace();
+                throw ex;
             }
 
             if (appKeyStore.containsAlias(TEST_KEY_ALIAS)) appKeyStore.deleteEntry(TEST_KEY_ALIAS);
@@ -192,18 +214,19 @@ public interface EncryptionScheme {
             SecretKey key = keyGenerator.generateKey();
 
             IvParameterSpec ivParameterSpec = null;
-            if (withIV) {
-                // Initialize secure RNG.
-                SecureRandom secureRandom = null;
-                try {
-                    // If the SDK and device support it, use getInstanceStrong.
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        secureRandom = SecureRandom.getInstanceStrong();
-                } catch (Exception ignored) {}
-                // Otherwise, ignore exceptions and fall back to the legacy SecureRandom constructor,
-                // if it wasn't already initialized.
-                if (secureRandom == null) secureRandom = new SecureRandom();
 
+            // Initialize secure RNG.
+            SecureRandom secureRandom = null;
+            try {
+                // If the SDK and device support it, use getInstanceStrong.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    secureRandom = SecureRandom.getInstanceStrong();
+            } catch (Exception ignored) {}
+            // Otherwise, ignore exceptions and fall back to the legacy SecureRandom constructor,
+            // if it wasn't already initialized.
+            if (secureRandom == null) secureRandom = new SecureRandom();
+
+            if (withIV) {
                 // Generate a secure random initialization vector.
                 byte[] iv = new byte[16];
                 secureRandom.nextBytes(iv);
@@ -212,8 +235,9 @@ public interface EncryptionScheme {
 
             Cipher cipher = Cipher.getInstance(transformation);
 
-            // Fake payload.
-            byte[] payload = new byte[]{ 0, 1, 2, 3, 4, 5, 6, 7 };
+            // Fake payload (header size).
+            byte[] payload = new byte[112];
+            secureRandom.nextBytes(payload);
 
             if (withIV) cipher.init(Cipher.ENCRYPT_MODE, key, ivParameterSpec);
             else cipher.init(Cipher.ENCRYPT_MODE, key);

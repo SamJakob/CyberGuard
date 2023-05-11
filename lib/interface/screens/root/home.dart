@@ -44,26 +44,36 @@ class HomeScreen extends StatelessWidget {
                   ),
                   Expanded(child: Container()),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: kSpaceUnitPx * 1.5, vertical: kSpaceUnitPx)
+                    padding: const EdgeInsets.symmetric(
+                            horizontal: kSpaceUnitPx * 1.5,
+                            vertical: kSpaceUnitPx)
                         .copyWith(top: 0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         HeroIcon(HeroIcons.exclamationTriangle,
-                            size: 48, color: context.colorScheme.onPrimaryContainer),
+                            size: 48,
+                            color: context.colorScheme.onPrimaryContainer),
                         const SizedBox(width: kSpaceUnitPx),
                         Expanded(
                           child: RichText(
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                    text: "You still have sections to complete!",
-                                    style: TextStyle(color: context.colorScheme.onPrimaryContainer.withOpacity(0.8))),
+                                    text:
+                                        "You still have sections to complete!",
+                                    style: TextStyle(
+                                        color: context
+                                            .colorScheme.onPrimaryContainer
+                                            .withOpacity(0.8))),
                                 const TextSpan(text: " "),
                                 TextSpan(
-                                    text: "Completing them will improve your score.",
-                                    style: TextStyle(color: context.colorScheme.onPrimaryContainer)),
+                                    text:
+                                        "Completing them will improve your score.",
+                                    style: TextStyle(
+                                        color: context
+                                            .colorScheme.onPrimaryContainer)),
                               ],
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,

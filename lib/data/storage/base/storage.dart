@@ -1,13 +1,40 @@
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
+import 'package:cyberguard/const/channels.dart';
+import 'package:cyberguard/const/debugging.dart';
 import 'package:cyberguard/data/struct/platform_message.dart';
 import 'package:cyberguard/domain/error.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:meta/meta.dart';
 
-abstract class StorageService {
+/// A delegate that may be used to serialize and deserialize data from generic
+/// types [T] and [U].
+///
+/// Serialization occurs from [T] -> [U].
+/// Deserialization occurs from [U] -> [T].
+///
+/// This is used by [StorageService] to convert data passed to it in an
+/// application-usable (i.e., hydrated [T] format) to a storage-usable (i.e.,
+/// dehydrated [U] format) and vice versa.
+abstract class SerializationService<T, U> {
+  /// Instantiates a new instance of [T].
+  T instantiate();
+
+  /// Serializes data into [U] format, from [T] format, for storage.
+  U? serialize(final T? data);
+
+  /// Deserializes data from [U] format, into [T] format, for use.
+  T? deserialize(final U? data);
+}
+
+/// A storage service that stores [T] data in [U] format.
+abstract class StorageService<T, U> {
   /// The storage service name. This is used to determine the base key, under which
   /// stored data is saved.
   final String name;
+
+  final SerializationService<T, U> serializationService;
 
   bool _isInitialized = false;
 
@@ -15,7 +42,10 @@ abstract class StorageService {
   /// otherwise false.
   bool get isInitialized => _isInitialized;
 
-  StorageService({required this.name});
+  StorageService({
+    required this.name,
+    required this.serializationService,
+  });
 
   /// May be used to communicate with lower-level abstraction layers to allocate
   /// storage space, etc., or otherwise ensure the data is accessible.
@@ -27,7 +57,7 @@ abstract class StorageService {
     _isInitialized = true;
   }
 
-  T _ensureInitialized<T>(final T Function() beforeDoing) {
+  U _ensureInitialized<U>(final U Function() beforeDoing) {
     if (!_isInitialized) {
       throw StateError(
           "Tried to use $runtimeType (Storage Service) but it wasn't initialized.");
@@ -47,17 +77,30 @@ abstract class StorageService {
     _isInitialized = false;
   }
 
-  /// Fetches the stored data from at rest, performs any necessary steps to parse the data.
-  Future<void> load();
+  /// Checks whether there is currently data stored at rest. Returns true if
+  /// there is, otherwise false.
+  Future<bool> hasData();
+
+  /// Fetches the stored data from at rest, performs any necessary steps to
+  /// parse the data.
+  /// Otherwise, returns null if no data is stored.
+  Future<T?> load();
 
   /// Stores the data to rest. Performs any necessary steps to serialize the data.
-  Future<void> save();
+  Future<void> save(final T data);
+
+  /// Deletes the data currently at rest.
+  /// If there is no data stored at rest, this does nothing.
+  Future<void> delete();
 }
 
-abstract class EncryptedFileStorageService extends StorageService {
+/// A storage service that stores [T] data as encrypted binary data, in a file.
+/// This service uses the CyberGuard Secure Storage platform channel to encrypt
+/// and decrypt the data with the device's Trusted Execution Environment (TEE).
+abstract class EncryptedFileStorageService<T>
+    extends StorageService<T, Uint8List> {
   /// The reference to the Flutter Platform Channel for CyberGuard Secure Storage services.
-  static const _platformEncryption =
-      MethodChannel("com.samjakob.cyberguard/secure_storage");
+  static const _platformEncryption = MethodChannel(kSecureStorageChannel);
 
   /// The version of the platform channel implementation this service is expecting.
   /// Bump only for breaking changes.
@@ -66,6 +109,9 @@ abstract class EncryptedFileStorageService extends StorageService {
   /// The identifier for the encryption key this storage service should use. Leave as
   /// null to use the default encryption key.
   final String? encryptionKeyIdentifier;
+
+  /// The identifier for the service. This is used for file paths.
+  final String? _serviceIdentifier;
 
   /// If set to true, an exception will be thrown if enhanced security cannot be used.
   /// **For now, this must be true unless the device is an emulator/simulator to encourage better security
@@ -81,10 +127,14 @@ abstract class EncryptedFileStorageService extends StorageService {
 
   EncryptedFileStorageService({
     required super.name,
+    required super.serializationService,
     final String? encryptionKeyIdentifier,
   })  : requiresEnhancedSecurity = true,
         encryptionKeyIdentifier =
-            encryptionKeyIdentifier ?? "CGA_KEY_${name.toUpperCase()}";
+            encryptionKeyIdentifier ?? "CGA_KEY_${name.toUpperCase()}",
+        _serviceIdentifier = sha256
+            .convert("CGA_SERVICE_${name.toUpperCase()}".codeUnits)
+            .toString();
 
   @override
   @mustCallSuper
@@ -106,43 +156,137 @@ abstract class EncryptedFileStorageService extends StorageService {
     // Generate the encryption keys, if they have not already been generated.
     await _generateEncryptionKey(name: encryptionKeyIdentifier);
 
-    // Load data from disk, if it has not already been loaded. This step will be
-    // skipped if no data exists.
-    await load();
-
     super.initialize();
   }
 
   @override
   @mustCallSuper
   Future<void> uninitialize() async {
-    await save();
-
-    // TODO: evict data from memory.
-
     super.uninitialize();
   }
 
-  /// Loads the encrypted data from disk, then performs decryption of the data.
-  @override
-  Future<void> load() async {}
+  /// Fetches the storage path from the platform channel.
+  /// This path is intended for the storage of ALREADY ENCRYPTED data, as such
+  /// it is not encrypted itself, nor is it intended to be. It may not be
+  /// inherently secure, but it should be inaccessible to other apps.
+  Future<Directory> _getPlatformStorageLocation() async {
+    final platformPath = (await _platformEncryption
+        .invokeMethod('getStorageLocation')) as String;
 
-  /// Encrypts the data resident in memory, evicts the resident clear-text data
-  /// and writes the encrypted payload to disk for a subsequent [load] call.
+    // Normalize the platformPath by adding a trailing path seperator if there
+    // isn't one.
+    return Directory(platformPath.endsWith(Platform.pathSeparator)
+        ? platformPath
+        : '$platformPath${Platform.pathSeparator}');
+  }
+
+  Future<File> _getServiceStorageFile() async {
+    return File(
+        "${(await _getPlatformStorageLocation()).path}$_serviceIdentifier");
+  }
+
+  Future<File> _getServiceStorageBackupFile() async {
+    return File(
+        "${(await _getPlatformStorageLocation()).path}$_serviceIdentifier.backup");
+  }
+
   @override
-  Future<void> save() async {}
+  Future<bool> hasData() async {
+    final storageFile = await _getServiceStorageFile();
+    return await storageFile.exists();
+  }
+
+  Future<bool> hasBackup() async {
+    final backupFile = await _getServiceStorageBackupFile();
+    return await backupFile.exists();
+  }
+
+  /// Loads the encrypted data from disk, then performs decryption of the data.
+  /// This step will do nothing and return null (or the result of
+  /// [SerializationService.instantiate]) if there is no data to load
+  /// (i.e., if the file does not exist).
+  @override
+  Future<T?> load() async {
+    final storageFile = await _getServiceStorageFile();
+
+    // If the data does not exist, check if there is a backup.
+    if (!(await hasData())) {
+      // For now, silently recover backups if they exist and the main file does
+      // not.
+      if (await hasBackup()) {
+        await (await _getServiceStorageBackupFile()).rename(storageFile.path);
+      } else {
+        // Otherwise instantiate with new data.
+        return serializationService.instantiate();
+      }
+    }
+
+    // Read the data from disk.
+    final encryptedData = await storageFile.readAsBytes();
+
+    // Decrypt and deserialize the data.
+    final decryptedData = await _decrypt(data: encryptedData);
+    return serializationService.deserialize(decryptedData) ??
+        serializationService.instantiate();
+  }
+
+  /// Encrypts the specified data, and writes the encrypted payload to disk for
+  /// a subsequent [load] call.
+  @override
+  Future<void> save(final T data) async {
+    final storageFile = await _getServiceStorageFile();
+    final backupFile = await _getServiceStorageBackupFile();
+
+    // Take a backup of the existing stored data.
+    if (await hasData()) {
+      // If the backup file already exists, delete it.
+      if (await backupFile.exists()) {
+        await backupFile.delete();
+      }
+
+      await (await _getServiceStorageFile()).rename(backupFile.path);
+    }
+
+    // Serialize the data, so it can be encrypted.
+    final serializedData = serializationService.serialize(data);
+    if (serializedData == null) {
+      // If there's no data, delete the storage file and backup file, if they
+      // exist.
+      if (await storageFile.exists()) await storageFile.delete();
+      if (await backupFile.exists()) await backupFile.delete();
+    }
+
+    // Encrypt the data.
+    final encryptedData = await _encrypt(data: serializedData!);
+
+    // Write the encrypted data to disk.
+    await storageFile.writeAsBytes(encryptedData);
+  }
+
+  /// Deletes the encrypted data from disk.
+  /// If there is no data stored on disk, this does nothing.
+  @override
+  Future<void> delete() async {
+    if (await hasData()) {
+      await (await _getServiceStorageFile()).delete();
+    }
+  }
 
   //region Platform Channel Code
+
+  Future<Map<dynamic, dynamic>> _getPlatformChannelInfo() async {
+    return (await _platformEncryption
+        .invokeMethod('ping')
+        .timeout(const Duration(milliseconds: 1000))) as Map<dynamic, dynamic>;
+  }
 
   /// Pings the platform channel interface to determine whether there is a compliant
   /// implementation on the current platform. Returns true if there is, otherwise
   /// false.
   Future<bool> _platformChannelPing() async {
     try {
-      final Map<dynamic, dynamic> pingResponse = (await _platformEncryption
-              .invokeMethod('ping')
-              .timeout(const Duration(milliseconds: 1000)))
-          as Map<dynamic, dynamic>;
+      final Map<dynamic, dynamic> pingResponse =
+          await _getPlatformChannelInfo();
 
       if (pingResponse.containsKey('is_simulator') &&
           pingResponse['is_simulator'] as bool) {
@@ -160,11 +304,6 @@ abstract class EncryptedFileStorageService extends StorageService {
     }
   }
 
-  Future<String> _getStorageLocation() async {
-    return (await _platformEncryption.invokeMethod('getStorageLocation'))
-        as String;
-  }
-
   Future<PlatformEnhancedSecurityResponse>
       _checkEnhancedSecurityStatus() async {
     Map<dynamic, dynamic> response =
@@ -177,37 +316,58 @@ abstract class EncryptedFileStorageService extends StorageService {
 
   Future<void> _generateEncryptionKey(
       {final String? name, final bool? overwriteIfExists}) async {
+    // If (and only if) the device is a simulator, don't run this method.
+    if (_isSimulator) return await simulateWait(SimulatedWaitDuration.medium);
+
     (await _platformEncryption.invokeMethod(
         'generateKey', {"name": name, "overwriteIfExists": overwriteIfExists}));
   }
 
-  Future<Uint8List> _encrypt(
-      {final String? keyName, required final Uint8List data}) async {
-    return (await _platformEncryption
-        .invokeMethod('encrypt', {"name": keyName, "data": data})) as Uint8List;
+  Future<Uint8List> _encrypt({required final Uint8List data}) async {
+    // If (and only if) the device is a simulator, simply return the data that
+    // was provided to it.
+    if (_isSimulator) {
+      return simulateWaitForData(SimulatedWaitDuration.medium, data: data);
+    }
+
+    // Gzip compress the data before encrypting it. This is done to reduce the
+    // size of the data that is encrypted, which reduces the amount of time
+    // required to encrypt and decrypt the data.
+    final compressedData = gzip.encode(data);
+
+    final result = (await _platformEncryption.invokeMethod('encrypt', {
+      "name": encryptionKeyIdentifier,
+      "data": compressedData,
+    })) as Uint8List;
+
+    return result;
   }
 
-  Future<Uint8List> _decrypt(
-      {final String? keyName, required final Uint8List data}) async {
-    return (await _platformEncryption
-        .invokeMethod('decrypt', {"name": keyName, "data": data})) as Uint8List;
+  Future<Uint8List> _decrypt({required final Uint8List data}) async {
+    // If (and only if) the device is a simulator, simply return the data that
+    // was provided to it.
+    if (_isSimulator) {
+      return simulateWaitForData(SimulatedWaitDuration.medium, data: data);
+    }
+
+    // Decrypt the data.
+    final decryptedData = (await _platformEncryption.invokeMethod('decrypt', {
+      "name": encryptionKeyIdentifier,
+      "data": data,
+    })) as Uint8List;
+
+    return Uint8List.fromList(gzip.decode(decryptedData));
   }
 
   //endregion
 
   Future<void> test() async {
-    const data = "Howdy pardner!";
+    const String payload = "Howdy, pardner!";
 
-    var encrypted = await _encrypt(
-      keyName: encryptionKeyIdentifier,
-      data: Uint8List.fromList(data.codeUnits),
-    );
+    Uint8List encrypted =
+        await _encrypt(data: Uint8List.fromList(payload.codeUnits));
+    Uint8List decrypted = await _decrypt(data: encrypted);
 
-    var decrypted = await _decrypt(
-      keyName: encryptionKeyIdentifier,
-      data: encrypted,
-    );
-
-    print(String.fromCharCodes(decrypted));
+    print("Decrypted: ${String.fromCharCodes(decrypted)}");
   }
 }

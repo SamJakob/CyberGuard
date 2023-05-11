@@ -1,10 +1,12 @@
 package com.samjakob.cyberguard.platform.secure_storage_delegate.scheme;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.samjakob.cyberguard.BuildConfig;
 import com.samjakob.cyberguard.errors.SecureStorageDelegateError;
 
 import java.security.KeyStore;
@@ -22,6 +24,10 @@ public class EncryptionSchemeFactory {
     private static EncryptionSchemeFactory getFactory() {
         if (instance == null) return (instance = new EncryptionSchemeFactory());
         else return instance;
+    }
+
+    public static EncryptionSchemeOption getByName(String name) {
+        return getFactory().encryptionSchemes.get(name);
     }
 
     public static String nameFor(EncryptionScheme scheme) {
@@ -54,11 +60,6 @@ public class EncryptionSchemeFactory {
         );
     }
 
-    /** @see #getEligibleScheme(Context, KeyStore, SchemeStrength) */
-    public static EncryptionSchemeChoice getEligibleScheme(@NonNull Context context, @NonNull KeyStore keyStore) {
-        return getEligibleScheme(context, keyStore, null);
-    }
-
     /**
      * Returns the first eligible scheme with the highest strength (or,
      * if minimumStrength is specified, the first eligible scheme of that
@@ -71,7 +72,8 @@ public class EncryptionSchemeFactory {
      * @return An {@link EncryptionSchemeChoice} with the most secure scheme
      * possible on the current device.
      */
-    public static EncryptionSchemeChoice getEligibleScheme(@NonNull Context context, @NonNull KeyStore keyStore, @Nullable SchemeStrength minimumStrength) {
+    @NonNull
+    private static EncryptionSchemeChoice searchForEligibleScheme(@NonNull Context context, @NonNull KeyStore keyStore, @Nullable SchemeStrength minimumStrength) {
         String message = null;
         EncryptionSchemeOption selectedOption = null;
         EncryptionSchemeOption previouslyConsideredOption = null;
@@ -129,11 +131,56 @@ public class EncryptionSchemeFactory {
         }
 
         return new EncryptionSchemeChoice(
-            message != null
-                    ? message
-                    : "Your device does not support the secure encryption schemes used in the application.",
-            null
+                message != null
+                        ? message
+                        : "Your device does not support the secure encryption schemes used in the application.",
+                null
         );
+    }
+
+    /** @see #getEligibleScheme(Context, KeyStore, SchemeStrength) */
+    public static EncryptionSchemeChoice getEligibleScheme(@NonNull Context context, @NonNull KeyStore keyStore) {
+        return getEligibleScheme(context, keyStore, null);
+    }
+
+    /**
+     * Searches for an eligible scheme for the current platform, then once it is selected, 'locks
+     * in' that choice by storing the factory name of the selected scheme in private preferences.
+     * @param context The application context.
+     * @param keyStore The keystore.
+     * @param minimumStrength The minimum strength of the scheme to be used.
+     * @return The scheme to be used, otherwise null if none could be found.
+     */
+    public static EncryptionSchemeChoice getEligibleScheme(@NonNull Context context, @NonNull KeyStore keyStore, @Nullable SchemeStrength minimumStrength) {
+        // Access the shared preferences for platform settings.
+        SharedPreferences platformPrefs = context.getSharedPreferences("__CGA_PLATFORM", Context.MODE_PRIVATE);
+
+        // If there is a scheme in the platform settings section, attempt to load it.
+        if (platformPrefs.contains("scheme")) {
+            try {
+                String schemeName = platformPrefs.getString("scheme", null);
+                if (schemeName == null) throw new SecureStorageDelegateError("Failed to find previously used encryption scheme.");
+
+                final EncryptionSchemeOption schemeOption = getByName(schemeName);
+                final String message = platformPrefs.getString("scheme_message", null);
+
+                return new EncryptionSchemeChoice(message, schemeOption.scheme.newInstance());
+            } catch (Exception ex) {
+                if (BuildConfig.DEBUG) ex.printStackTrace();
+                throw new SecureStorageDelegateError("Failed to prepare encryption scheme.");
+            }
+        }
+
+        // Otherwise, search for an eligible scheme and, if there is one, store it, otherwise
+        // return the choice object directly (which contains the error message).
+        final EncryptionSchemeChoice schemeChoice = searchForEligibleScheme(context, keyStore, minimumStrength);
+        if (schemeChoice.scheme == null) return schemeChoice;
+
+        SharedPreferences.Editor platformPrefsEditor = platformPrefs.edit();
+        platformPrefsEditor.putString("scheme", EncryptionSchemeFactory.nameFor(schemeChoice.scheme));
+        platformPrefsEditor.putString("scheme_message", schemeChoice.message);
+        platformPrefsEditor.apply();
+        return schemeChoice;
     }
 
     public static class EncryptionSchemeChoice {

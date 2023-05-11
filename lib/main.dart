@@ -1,11 +1,13 @@
 import 'package:cyberguard/app.dart';
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import 'locator.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await setupLocator();
+
   runApp(
-    // Top-level widget to store the state of each of the providers.
-    // The entire application (CGApp) is wrapped to allow any widget to access this state.
-    const ProviderScope(child: CGApp()),
+    const CGApp(),
   );
 }

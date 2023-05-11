@@ -18,8 +18,7 @@ import com.samjakob.cyberguard.platform.secure_storage_delegate.EnhancedSecurity
 import com.samjakob.cyberguard.platform.secure_storage_delegate.SecureStorageDelegate;
 import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.EncryptionSchemeFactory;
 import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.HybridRSAEncryption;
-import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.RSAEncryption;
-import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.FallbackRSAEncryption;
+import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.FallbackAESEncryption;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -66,12 +65,8 @@ public class CGASecureStorage {
         // Don't initialize if already initialized.
         if (isInitialized) return;
 
-        // Initialize Tink's registry for Hybrid Encryption.
-//        HybridConfig.register();
-
         // Initialize the CyberGuard encryption schemes.
-        FallbackRSAEncryption.registerScheme();
-        RSAEncryption.registerScheme();
+//        FallbackAESEncryption.registerScheme();
         HybridRSAEncryption.registerScheme();
 //        HybridECEncryption.registerScheme();
 
@@ -93,7 +88,7 @@ public class CGASecureStorage {
                 appKeyStore = KeyStore.getInstance("AndroidKeyStore");
                 appKeyStore.load(null);
             } catch (Exception ex) {
-                throw new MissingSecureStorageDelegateError("We couldn't access your encryption data.");
+                throw new MissingSecureStorageDelegateError("We couldn't access the app encryption data.");
             }
 
             // Select the strongest eligible encryption scheme for the current device.
@@ -152,8 +147,13 @@ public class CGASecureStorage {
 
                 response.put("is_simulator", checkIfSimulator());
                 response.put("platform", "Android");
-                response.put("version", SECURE_STORAGE_IMPL_VERSION);
+                response.put("platform_version", String.format(
+                    "%s (SDK %s)",
+                    Build.VERSION.RELEASE,
+                    Build.VERSION.SDK_INT
+                ));
 
+                response.put("version", SECURE_STORAGE_IMPL_VERSION);
                 response.put("has_enhanced_security", enhancedSecurityStatus.code);
 
                 if (secureStorageDelegate != null) {
@@ -184,6 +184,11 @@ public class CGASecureStorage {
 
         try {
             switch (call.method) {
+                case "getStorageLocation": {
+                    result.success(secureStorageDelegate.getStorageLocation());
+                    break;
+                }
+
                 case "generateKey": {
                     String name = call.argument("name");
                     boolean overwriteIfExists = Boolean.TRUE.equals(call.argument("overwriteIfExists"));

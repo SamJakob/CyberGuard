@@ -1,6 +1,9 @@
 import 'dart:collection';
+import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:messagepack/messagepack.dart';
 import 'package:meta/meta.dart';
 
 /// A sorting function for specifying the relative order of [AccessMethod]s
@@ -38,7 +41,7 @@ typedef AccessMethodTreeSort = int Function(AccessMethod a, AccessMethod b);
 /// relevant optimizations.
 ///
 /// This has not presently been fully explored in the interests of time.
-class AccessMethodTree extends SplayTreeSet<AccessMethod> {
+class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
   /// Simply uses [AccessMethod.compareTo] to compare values.
   static int defaultSort(final AccessMethod a, final AccessMethod b) =>
       a.compareTo(b);
@@ -62,9 +65,10 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
   }
 
   /// Initializes the tree with an initial set of [AccessMethod]s.
-  /// Optionally takes a sorting method, otherwise uses the [Comparable]
-  /// functionality in [AccessMethod].
   AccessMethodTree(final Set<AccessMethod> methods) : this._(methods);
+
+  /// Initializes an empty access method tree.
+  AccessMethodTree.empty() : this._({});
 
   /// Creates a clone of the tree. Can also be used to [restructure] the tree
   /// to sort based on a different property. If [sort] is not specified, then
@@ -136,6 +140,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
 
       // Normalize the tree.
       _normalize();
+      notifyListeners();
 
       return true;
     } else {
@@ -177,6 +182,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
 
       // Normalize the tree.
       _normalize();
+      notifyListeners();
 
       return true;
     } else {
@@ -227,7 +233,42 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> {
 
     return 'AccessMethodTree (requires SOME factor)\n${childStr.replaceAll('\n', '\n\t')}';
   }
+
+  /// Pack the tree into binary data.
+  Uint8List pack() {
+    final messagePacker = Packer();
+
+    messagePacker.packListLength(length);
+    for (final method in this) {
+      messagePacker.packBinary(method.pack());
+    }
+
+    return messagePacker.takeBytes();
+  }
+
+  /// Unpack the tree from binary data.
+  static AccessMethodTree? unpack(final Uint8List data) {
+    final messageUnpacker = Unpacker(data);
+    final tree = AccessMethodTree.empty();
+
+    int length = messageUnpacker.unpackListLength();
+
+    Set<AccessMethod> methods = {};
+    for (int i = 0; i < length; i++) {
+      final methodData = messageUnpacker.unpackBinary();
+      methods.add(AccessMethod.unpack(Uint8List.fromList(methodData)));
+    }
+
+    // addAll assigns the owner of each entry, so we don't need to do that
+    // above.
+    tree.addAll(methods);
+    return tree;
+  }
 }
+
+typedef AccessMethodAdditionalFieldsPacker = void Function(Packer packer);
+typedef AccessMethodInstantiator<T extends AccessMethod> = T Function(
+    Unpacker unpacker);
 
 /// Used to represent a means of accessing an [Account].
 @sealed
@@ -284,7 +325,7 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
     final int? priority,
     final Set<AccessMethod>? methods,
   })  : _priority = priority ?? -1,
-        added = clock.now(),
+        added = clock.now().toUtc(),
         methods = methods != null ? AccessMethodTree(methods) : null;
 
   /// Used to implement subclasses that may include additional data.
@@ -324,13 +365,81 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
   /// method to a new tree.
   /// Nested methods (i.e., sub methods)
   AccessMethod clone({final bool keepPriority = false});
+
+  String get factoryName;
+
+  /// Pack the access method into binary data.
+  /// The optional [additionalFields] parameter can be used by subclasses to
+  /// pack additional data.
+  @mustCallSuper
+  Uint8List pack({final AccessMethodAdditionalFieldsPacker? additionalFields}) {
+    final messagePacker = Packer();
+
+    // Write the factory type name.
+    // (or if it's a direct instantiation of this class, write AccessMethod)
+    messagePacker.packString(factoryName);
+
+    // If there are additional fields, pack them.
+    if (additionalFields != null) {
+      additionalFields(messagePacker);
+    }
+
+    // Then, write the base fields.
+    messagePacker
+      ..packInt(_priority)
+      ..packString(label)
+      ..packString(added.toIso8601String())
+      ..packBool(hasAccessMethods);
+
+    // Write the nested methods if there are any.
+    if (hasAccessMethods) {
+      messagePacker.packBinary(methods!.pack());
+    }
+
+    return messagePacker.takeBytes();
+  }
+
+  /// Used by subclasses to unpack their data.
+  AccessMethod.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  })  : _priority = messageUnpacker.unpackInt()!,
+        label = messageUnpacker.unpackString()!,
+        added = DateTime.parse(messageUnpacker.unpackString()!),
+        methods = messageUnpacker.unpackBool()!
+            ? AccessMethodTree.unpack(
+                Uint8List.fromList(messageUnpacker.unpackBinary()),
+              )
+            : null,
+        // Load the owner as specified (avoids cyclic dependency when
+        // [un]packing).
+        _owner = owner;
+
+  /// Load and unpack the access method from binary data.
+  static AccessMethod unpack(
+    final Uint8List data, {
+    final AccessMethodTree? owner,
+  }) {
+    final messageUnpacker = Unpacker(data);
+    String factoryName = messageUnpacker.unpackString()!;
+
+    return AccessMethodRegistry.getUnpacker(factoryName)(
+      messageUnpacker,
+      owner: owner,
+    );
+  }
 }
 
 /// An access method implementation that represents 'something you know'.
 /// Includes: password, PIN, etc.,
-class KnowledgeAccessMethod<T> extends AccessMethod {
+class KnowledgeAccessMethod extends AccessMethod {
   /// A representation of the data exposed by this access method.
-  T data;
+  String data;
+
+  static const String typeName = "KnowledgeAccessMethod";
+
+  @override
+  String get factoryName => typeName;
 
   KnowledgeAccessMethod(
     this.data, {
@@ -339,8 +448,14 @@ class KnowledgeAccessMethod<T> extends AccessMethod {
     super.methods,
   });
 
+  KnowledgeAccessMethod.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  })  : data = messageUnpacker.unpackString()!,
+        super.byUnpacking(messageUnpacker, owner: owner);
+
   @override
-  KnowledgeAccessMethod<T> clone({final bool keepPriority = false}) {
+  KnowledgeAccessMethod clone({final bool keepPriority = false}) {
     return KnowledgeAccessMethod(
       data,
       priority: keepPriority ? _priority : null,
@@ -351,16 +466,33 @@ class KnowledgeAccessMethod<T> extends AccessMethod {
 
   @override
   String toString() => _toString('KnowledgeAccessMethod', 'data = $data');
+
+  @override
+  Uint8List pack({final AccessMethodAdditionalFieldsPacker? additionalFields}) {
+    return super.pack(additionalFields: (final Packer messagePacker) {
+      messagePacker.packString(data);
+    });
+  }
 }
 
 /// An access method implementation that represents 'something you have'.
 /// Includes: hardware authentication device, mobile device, etc.,
 class PhysicalAccessMethod extends AccessMethod {
+  static const String typeName = "PhysicalAccessMethod";
+
+  @override
+  String get factoryName => typeName;
+
   PhysicalAccessMethod({
     super.priority,
     required super.label,
     super.methods,
   });
+
+  PhysicalAccessMethod.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  }) : super.byUnpacking(messageUnpacker, owner: owner);
 
   @override
   PhysicalAccessMethod clone({final bool keepPriority = false}) {
@@ -379,11 +511,21 @@ class PhysicalAccessMethod extends AccessMethod {
 /// Includes: fingerprint, facial scan, retinal scan, behavioral analysis,
 /// etc.,
 class BiometricAccessMethod extends AccessMethod {
+  static const String typeName = "BiometricAccessMethod";
+
+  @override
+  String get factoryName => typeName;
+
   BiometricAccessMethod({
     super.priority,
     required super.label,
     super.methods,
   });
+
+  BiometricAccessMethod.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  }) : super.byUnpacking(messageUnpacker, owner: owner);
 
   @override
   BiometricAccessMethod clone({final bool keepPriority = false}) {
@@ -401,11 +543,21 @@ class BiometricAccessMethod extends AccessMethod {
 /// An access method implementation that represents 'something that controls
 /// when you have access'.
 class TemporalAccessMethod extends AccessMethod {
+  static const String typeName = "TemporalAccessMethod";
+
+  @override
+  String get factoryName => typeName;
+
   TemporalAccessMethod({
     super.priority,
     required super.label,
     super.methods,
   });
+
+  TemporalAccessMethod.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  }) : super.byUnpacking(messageUnpacker, owner: owner);
 
   @override
   TemporalAccessMethod clone({final bool keepPriority = false}) {
@@ -422,6 +574,11 @@ class TemporalAccessMethod extends AccessMethod {
 
 /// Represents a conjunction (AND) of access methods.
 class AccessMethodConjunction extends AccessMethod {
+  static const String typeName = "AccessMethodConjunction";
+
+  @override
+  String get factoryName => typeName;
+
   @override
   AccessMethodTree get methods => super.methods!;
 
@@ -432,6 +589,11 @@ class AccessMethodConjunction extends AccessMethod {
           methods: methods,
           label: methods.map((final method) => method.label).join(" & "),
         );
+
+  AccessMethodConjunction.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  }) : super.byUnpacking(messageUnpacker, owner: owner);
 
   @override
   AccessMethodConjunction clone({final bool keepPriority = false}) {
@@ -456,4 +618,65 @@ class DuplicateAccessMethodEntryStateError extends StateError {
           "already belonging to a tree was about to be added to another tree.\nIt must either be "
           "removed from the initial tree first, or cloned before being added to the new one.",
         );
+}
+
+/// REGISTRY
+
+typedef AccessMethodFactory<T extends AccessMethod> = T Function(
+  Unpacker, {
+  AccessMethodTree? owner,
+});
+
+class AccessMethodRegistry {
+  static AccessMethodRegistry? _instance;
+  static AccessMethodRegistry get instance {
+    if (_instance == null) initialize();
+    return _instance!;
+  }
+
+  final Map<String, AccessMethodFactory> _factories = {};
+  AccessMethodRegistry._();
+
+  /// Can be used to explicitly initialize the access method
+  /// registry ahead of time. This is not necessary, as the registry will
+  /// be initialized automatically when it is first accessed.
+  static void initialize() {
+    // If the factory is already initialized, do nothing.
+    if (_instance != null) return;
+
+    // Otherwise, initialize it.
+    _instance = AccessMethodRegistry._();
+
+    registerMethod(
+      KnowledgeAccessMethod.typeName,
+      KnowledgeAccessMethod.byUnpacking,
+    );
+    registerMethod(
+      PhysicalAccessMethod.typeName,
+      PhysicalAccessMethod.byUnpacking,
+    );
+    registerMethod(
+      BiometricAccessMethod.typeName,
+      BiometricAccessMethod.byUnpacking,
+    );
+    registerMethod(
+      TemporalAccessMethod.typeName,
+      TemporalAccessMethod.byUnpacking,
+    );
+    registerMethod(
+      AccessMethodConjunction.typeName,
+      AccessMethodConjunction.byUnpacking,
+    );
+  }
+
+  static void registerMethod(
+      final String name, final AccessMethodFactory factory) {
+    instance._factories[name] = factory;
+  }
+
+  static AccessMethodFactory<T> getUnpacker<T extends AccessMethod>(
+    final String name,
+  ) {
+    return instance._factories[name]! as AccessMethodFactory<T>;
+  }
 }

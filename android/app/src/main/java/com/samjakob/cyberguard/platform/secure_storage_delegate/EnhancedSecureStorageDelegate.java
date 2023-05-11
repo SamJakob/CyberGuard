@@ -9,6 +9,7 @@ import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 
+import com.samjakob.cyberguard.BuildConfig;
 import com.samjakob.cyberguard.MainActivity;
 import com.samjakob.cyberguard.errors.MissingSecureStorageDelegateError;
 import com.samjakob.cyberguard.errors.SecureStorageDelegateError;
@@ -76,6 +77,12 @@ public class EnhancedSecureStorageDelegate extends SecureStorageDelegate {
     @Override
     public String getEncryptionSchemeName() {
         return EncryptionSchemeFactory.nameFor(encryptionScheme);
+    }
+
+    @NonNull
+    @Override
+    public String getStorageLocation() {
+        return context.getFilesDir().getAbsolutePath();
     }
 
     public void generateKey(@Nullable String name, boolean overwriteIfExists) {
@@ -155,7 +162,7 @@ public class EnhancedSecureStorageDelegate extends SecureStorageDelegate {
                     }
 
                     flutterResult.success(
-                        encryptionScheme.decrypt(result.getCryptoObject(), data)
+                        encryptionScheme.decrypt(Objects.requireNonNull(result.getCryptoObject()), data)
                     );
                 } catch (Exception ex) {
                     flutterResult.error(

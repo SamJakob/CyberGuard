@@ -27,18 +27,20 @@ import java.util.Objects;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 
-public class FallbackRSAEncryption implements EncryptionScheme {
+public class FallbackAESEncryption implements EncryptionScheme {
 
-    public static final String NAME = "FallbackRSAEncryption";
+    public static final String NAME = "FallbackAESEncryption";
 
-    private static final String CIPHER_TRANSFORMATION = "RSA/ECB/PKCS1Padding";
+    private static final String CIPHER_TRANSFORMATION = "AES/CBC/PKCS7Padding";
 
     public static void registerScheme() {
         EncryptionSchemeFactory.register(
-            NAME, FallbackRSAEncryption.class,
+            NAME, FallbackAESEncryption.class,
             // Should work on every device.
-            FallbackRSAEncryption::checkEligibility,
+            FallbackAESEncryption::checkEligibility,
             EncryptionSchemeFactory.SchemeStrength.FALLBACK
         );
     }
@@ -46,9 +48,9 @@ public class FallbackRSAEncryption implements EncryptionScheme {
     private static String checkEligibility(Context context, KeyStore appKeyStore) {
         // Attempt to initialize a KeyPair generator to check the algorithm.
         try {
-            KeyPairGenerator.getInstance(
-                    KeyProperties.KEY_ALGORITHM_RSA,
-                    appKeyStore.getProvider()
+            KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES,
+                appKeyStore.getProvider()
             );
         } catch (NoSuchAlgorithmException ex) {
             return "Your device does not support any secure encryption algorithm.";
@@ -56,7 +58,7 @@ public class FallbackRSAEncryption implements EncryptionScheme {
 
         // Run an encryption test.
         try {
-            new FallbackRSAEncryption().performEncryptionTest(context, appKeyStore);
+            new FallbackAESEncryption().performEncryptionTest(context, appKeyStore);
         } catch (SecureStorageDelegateError ex) {
             return ex.getMessage();
         }
@@ -68,14 +70,16 @@ public class FallbackRSAEncryption implements EncryptionScheme {
     @Override
     public void generateKeyPair(MainActivity mainActivity, Context context, KeyStore appKeyStore, String name) {
         KeyGenParameterSpec.Builder keySpecBuilder = new KeyGenParameterSpec.Builder(
-                name, KeyProperties.PURPOSE_DECRYPT
+                name, KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT
         )
             // Require user authentication for usage of the key.
             .setUserAuthenticationRequired(true)
             // Also handled by setUserAuthenticationParameters for Android R+.
             .setUserAuthenticationValidityDurationSeconds(-1)
-            // Use OAEP padding for RSA.
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
+            // Use CBC block mode.
+            .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
+            // Use PKCS7 padding.
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
             ;
 
         // On supported devices, signal that new biometrics being enrolled should not
@@ -112,21 +116,21 @@ public class FallbackRSAEncryption implements EncryptionScheme {
         }
 
         try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(
-                KeyProperties.KEY_ALGORITHM_RSA,
+            KeyGenerator keyGenerator = KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES,
                 "AndroidKeyStore"
             );
 
             // Generate the keypair using AndroidKeyStore and the above requirements.
-            keyPairGenerator.initialize(keySpecBuilder.build());
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+            keyGenerator.init(keySpecBuilder.build());
+            SecretKey key = keyGenerator.generateKey();
 
             // Load the key information to verify that the key meets the necessary
             // standards.
             KeyFactory factory = KeyFactory.getInstance(
-                keyPair.getPrivate().getAlgorithm(), "AndroidKeyStore"
+                key.getAlgorithm(), "AndroidKeyStore"
             );
-            KeyInfo keyInfo = factory.getKeySpec(keyPair.getPrivate(), KeyInfo.class);
+            KeyInfo keyInfo = factory.getKeySpec(key, KeyInfo.class);
 
             // Ensure that the key has been generated securely, preventing its use if it
             // hasn't.
@@ -161,9 +165,9 @@ public class FallbackRSAEncryption implements EncryptionScheme {
         byte[] data
     ) {
         try {
-            PublicKey publicKey = appKeyStore.getCertificate(keyName).getPublicKey();
+            SecretKey key = (SecretKey) appKeyStore.getKey(keyName, null);
             Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+            cipher.init(Cipher.ENCRYPT_MODE, key);
             return cipher.doFinal(data);
         } catch (Exception ex) {
             if (BuildConfig.DEBUG) ex.printStackTrace();
@@ -178,9 +182,9 @@ public class FallbackRSAEncryption implements EncryptionScheme {
         @NonNull String keyName
     ) throws UserNotAuthenticatedException {
         try {
-            PrivateKey privateKey = (PrivateKey) appKeyStore.getKey(keyName, null);
+            SecretKey key = (SecretKey) appKeyStore.getKey(keyName, null);
             Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            cipher.init(Cipher.DECRYPT_MODE, key);
             return new BiometricPrompt.CryptoObject(cipher);
         } catch (UserNotAuthenticatedException ex) {
             throw ex;
@@ -191,7 +195,7 @@ public class FallbackRSAEncryption implements EncryptionScheme {
     }
 
     @NonNull
-    public byte[] decrypt(BiometricPrompt.CryptoObject cryptoObject, byte[] data) {
+    public byte[] decrypt(@NonNull BiometricPrompt.CryptoObject cryptoObject, byte[] data) {
         try {
             Cipher cipher = Objects.requireNonNull(cryptoObject.getCipher());
             return cipher.doFinal(data);
@@ -206,14 +210,11 @@ public class FallbackRSAEncryption implements EncryptionScheme {
 
     @Override
     public void performEncryptionTest(Context context, KeyStore appKeyStore) {
-        EncryptionScheme.teeCipherTest(
-            context,
-            appKeyStore,
-            KeyProperties.KEY_ALGORITHM_RSA,
-            2048,
-            KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1,
-            null,
-            CIPHER_TRANSFORMATION
+        EncryptionScheme.cipherTest(
+            KeyProperties.KEY_ALGORITHM_AES,
+            256,
+            CIPHER_TRANSFORMATION,
+            true
         );
     }
 

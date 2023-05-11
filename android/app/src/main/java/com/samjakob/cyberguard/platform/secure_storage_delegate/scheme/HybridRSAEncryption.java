@@ -28,6 +28,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
+import java.security.spec.MGF1ParameterSpec;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -39,7 +41,11 @@ import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
+
+import android.security.KeyStoreException;
 
 public class HybridRSAEncryption implements EncryptionScheme {
 
@@ -173,6 +179,7 @@ public class HybridRSAEncryption implements EncryptionScheme {
             if (!isSecureKey) {
                 throw new SecureStorageDelegateError("Failed to generate a secure key.");
             }
+
         } catch (Exception ex) {
             throw new SecureStorageDelegateError(ex);
         }
@@ -234,14 +241,13 @@ public class HybridRSAEncryption implements EncryptionScheme {
             // RSA-encrypt the header.
             PublicKey publicKey = appKeyStore.getCertificate(keyName).getPublicKey();
             Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey, new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT));
             byte[] header = cipher.doFinal(rawHeader);
 
             // Then concatenate the header and encrypted data.
             ByteArrayOutputStream payloadOutput = new ByteArrayOutputStream();
-            payloadOutput.write(header); // Header size: 256
+            payloadOutput.write(header); // Encrypted header size: 256 bytes
             payloadOutput.write(encryptedData);
-            payloadOutput.close();
             return payloadOutput.toByteArray();
         } catch (Exception ex) {
             if (BuildConfig.DEBUG) ex.printStackTrace();
@@ -258,7 +264,7 @@ public class HybridRSAEncryption implements EncryptionScheme {
         try {
             PrivateKey privateKey = (PrivateKey) appKeyStore.getKey(keyName, null);
             Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            cipher.init(Cipher.DECRYPT_MODE, privateKey, new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT));
             return new BiometricPrompt.CryptoObject(cipher);
         } catch (UserNotAuthenticatedException ex) {
             throw ex;
@@ -269,21 +275,23 @@ public class HybridRSAEncryption implements EncryptionScheme {
     }
 
     @NonNull
-    public byte[] decrypt(BiometricPrompt.CryptoObject cryptoObject, byte[] data) {
+    public byte[] decrypt(@NonNull BiometricPrompt.CryptoObject cryptoObject, byte[] data) {
+        Cipher cipher = Objects.requireNonNull(cryptoObject.getCipher());
+
         try {
             ByteArrayInputStream payloadInput = new ByteArrayInputStream(data);
 
             // Read the RSA-encrypted 'header' from the input stream.
+            // Should be 256-bytes with padding.
             byte[] header = new byte[256];
             if (payloadInput.read(header) != 256) throw new SecureStorageDelegateError();
 
             // Load the AES-encrypted data.
-            byte[] encryptedData = new byte[data.length - 256];
-            if (payloadInput.read(encryptedData) != data.length - 256)
+            byte[] encryptedData = new byte[data.length - header.length];
+            if (payloadInput.read(encryptedData) != data.length - header.length)
                 throw new SecureStorageDelegateError();
 
             // RSA-decrypt the header.
-            Cipher cipher = Objects.requireNonNull(cryptoObject.getCipher());
             byte[] payload = cipher.doFinal(header);
 
             byte[] iv = new byte[16];
@@ -344,7 +352,7 @@ public class HybridRSAEncryption implements EncryptionScheme {
         EncryptionScheme.cipherTest(
             KeyProperties.KEY_ALGORITHM_AES,
             256,
-                CIPHER_INNER_TRANSFORMATION,
+            CIPHER_INNER_TRANSFORMATION,
             true
         );
 
