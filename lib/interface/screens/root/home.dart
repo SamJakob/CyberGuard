@@ -1,18 +1,22 @@
 import 'package:cyberguard/const/interface.dart';
+import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/interface/partials/level_score_wheel.dart';
 import 'package:cyberguard/interface/screens/root/home/home_app_bar.dart';
 import 'package:cyberguard/interface/utility/context.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   final ScrollController _scrollController = ScrollController();
 
   HomeScreen({super.key});
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final accounts = ref.watch(accountsProvider).accounts;
+
     return Scrollbar(
       controller: _scrollController,
       child: CustomScrollView(
@@ -36,9 +40,9 @@ class HomeScreen extends StatelessWidget {
                   Expanded(child: Container()),
                   Center(
                     child: LevelScoreWheel(
-                      level: 1,
-                      xp: 20,
-                      xpPerLevel: 40,
+                      level: LevelScoreWheel.generateLevelInfo(
+                        numberOfAccounts: accounts.length,
+                      ),
                       size: (1 - scrollPercentage) * 175,
                     ),
                   ),
@@ -117,11 +121,11 @@ class HomeScreen extends StatelessWidget {
                     onPressed: () {
                       context.go("/accounts");
                     },
-                    child: Row(
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: const [
+                      children: [
                         Text("Go to Accounts"),
                         SizedBox(width: kSpaceUnitPx * 0.25),
                         HeroIcon(HeroIcons.arrowLongRight),

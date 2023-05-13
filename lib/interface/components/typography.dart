@@ -11,6 +11,7 @@ class TitleText extends StatelessWidget {
       style: TextStyle(
         color: Theme.of(context).colorScheme.secondary,
         fontWeight: FontWeight.w700,
+        fontSize: 16,
         // letterSpacing: 1.1,
       ),
     );

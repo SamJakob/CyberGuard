@@ -1,5 +1,7 @@
 package com.samjakob.cyberguard.errors;
 
+import androidx.annotation.NonNull;
+
 public class MissingSecureStorageDelegateError extends SecureStorageDelegateError {
 
     public MissingSecureStorageDelegateError() {
@@ -14,4 +16,9 @@ public class MissingSecureStorageDelegateError extends SecureStorageDelegateErro
         super("There is no secure storage environment on the device.", ex);
     }
 
+    @NonNull
+    @Override
+    public String getMessage() {
+        return super.getMessage();
+    }
 }

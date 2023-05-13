@@ -266,6 +266,26 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
   }
 }
 
+enum UserInterfaceKey {
+  /// The user interface key for a password access method.
+  password,
+
+  /// The user interface key for a TOTP access method.
+  totp,
+
+  /// The user interface key for a biometric access method.
+  biometric,
+
+  /// The user interface key for a security question and answer pair
+  /// access method.
+  securityQuestion;
+
+  static UserInterfaceKey fromName(final String name) {
+    return UserInterfaceKey.values
+        .singleWhere((final element) => name == element.name);
+  }
+}
+
 typedef AccessMethodAdditionalFieldsPacker = void Function(Packer packer);
 typedef AccessMethodInstantiator<T extends AccessMethod> = T Function(
     Unpacker unpacker);
@@ -306,8 +326,23 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
   /// instead be cloned. This is used to ensure that does not happen.
   AccessMethodTree? _owner;
 
+  /// A key used to identify the user interface to use for this access method.
+  UserInterfaceKey? userInterfaceKey;
+
   /// The user-defined label of the access method.
   String label;
+
+  /// A prompt, such as a security question, or other associated data (in clear
+  /// text) that is used to identify the data associated with this access
+  /// method (such as the answer to the security question).
+  String? prompt;
+
+  /// Any extra data associated with this access method. This is intended to
+  /// be used for the [userInterfaceKey] to provide additional data to the
+  /// user. This is also specific to the [userInterfaceKey] and is not
+  /// interpreted by the [AccessMethod] itself, so it is likely to be an
+  /// arbitrarily serialized value.
+  String? extra;
 
   /// The [DateTime] at which this access method was added (to the app).
   final DateTime added;
@@ -322,6 +357,8 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
 
   AccessMethod({
     required this.label,
+    this.userInterfaceKey,
+    this.prompt,
     final int? priority,
     final Set<AccessMethod>? methods,
   })  : _priority = priority ?? -1,
@@ -388,6 +425,8 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
     messagePacker
       ..packInt(_priority)
       ..packString(label)
+      ..packString(userInterfaceKey?.name)
+      ..packString(prompt)
       ..packString(added.toIso8601String())
       ..packBool(hasAccessMethods);
 
@@ -405,6 +444,10 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
     final AccessMethodTree? owner,
   })  : _priority = messageUnpacker.unpackInt()!,
         label = messageUnpacker.unpackString()!,
+        userInterfaceKey = messageUnpacker.unpackString() != null
+            ? UserInterfaceKey.fromName(messageUnpacker.unpackString()!)
+            : null,
+        prompt = messageUnpacker.unpackString(),
         added = DateTime.parse(messageUnpacker.unpackString()!),
         methods = messageUnpacker.unpackBool()!
             ? AccessMethodTree.unpack(
@@ -445,6 +488,8 @@ class KnowledgeAccessMethod extends AccessMethod {
     this.data, {
     super.priority,
     required super.label,
+    super.userInterfaceKey,
+    super.prompt,
     super.methods,
   });
 
@@ -486,6 +531,8 @@ class PhysicalAccessMethod extends AccessMethod {
   PhysicalAccessMethod({
     super.priority,
     required super.label,
+    super.userInterfaceKey,
+    super.prompt,
     super.methods,
   });
 
@@ -519,6 +566,8 @@ class BiometricAccessMethod extends AccessMethod {
   BiometricAccessMethod({
     super.priority,
     required super.label,
+    super.userInterfaceKey,
+    super.prompt,
     super.methods,
   });
 
@@ -551,6 +600,8 @@ class TemporalAccessMethod extends AccessMethod {
   TemporalAccessMethod({
     super.priority,
     required super.label,
+    super.userInterfaceKey,
+    super.prompt,
     super.methods,
   });
 
@@ -585,6 +636,8 @@ class AccessMethodConjunction extends AccessMethod {
   AccessMethodConjunction(
     final Set<AccessMethod> methods, {
     super.priority,
+    super.userInterfaceKey,
+    super.prompt,
   }) : super(
           methods: methods,
           label: methods.map((final method) => method.label).join(" & "),

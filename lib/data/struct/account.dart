@@ -23,6 +23,15 @@ class Account with ChangeNotifier {
     notifyListeners();
   }
 
+  bool get hasServiceUrl => _serviceUrl != null && _serviceUrl!.isNotEmpty;
+
+  String? _serviceUrl;
+  String? get serviceUrl => _serviceUrl;
+  set serviceUrl(final String? serviceUrl) {
+    _serviceUrl = serviceUrl;
+    notifyListeners();
+  }
+
   /// The disjunction (OR) of access methods required to access the account.
   final AccessMethodTree accessMethods;
 
@@ -31,9 +40,11 @@ class Account with ChangeNotifier {
     required final String name,
     required final String accountIdentifier,
     final AccessMethodTree? accessMethodTree,
+    final String? serviceUrl,
   })  : _name = name,
         _accountIdentifier = accountIdentifier,
-        accessMethods = accessMethodTree ?? AccessMethodTree.empty() {
+        accessMethods = accessMethodTree ?? AccessMethodTree.empty(),
+        _serviceUrl = serviceUrl {
     // Proxy change notifications from the access method tree to the
     // account.
     accessMethods.addListener(notifyListeners);
@@ -44,10 +55,16 @@ class Account with ChangeNotifier {
     final String accountIdentifier,
     final String password, {
     required final String name,
+    final String? serviceUrl,
   })  : _name = name,
+        _serviceUrl = serviceUrl,
         _accountIdentifier = accountIdentifier,
         accessMethods = AccessMethodTree({
-          KnowledgeAccessMethod(password, label: 'Password'),
+          KnowledgeAccessMethod(
+            password,
+            userInterfaceKey: UserInterfaceKey.password,
+            label: 'Password',
+          ),
         });
 
   /// Packs an account into binary data for storage.
@@ -56,6 +73,7 @@ class Account with ChangeNotifier {
     messagePacker
       ..packString(_name)
       ..packString(_accountIdentifier)
+      ..packString(serviceUrl)
       ..packBinary(accessMethods.pack());
     return messagePacker.takeBytes();
   }
@@ -66,6 +84,7 @@ class Account with ChangeNotifier {
 
     String name = messageUnpacker.unpackString()!;
     String accountIdentifier = messageUnpacker.unpackString()!;
+    String? serviceUrl = messageUnpacker.unpackString();
     AccessMethodTree accessMethods = AccessMethodTree.unpack(
       Uint8List.fromList(messageUnpacker.unpackBinary()),
     )!;
@@ -74,6 +93,7 @@ class Account with ChangeNotifier {
       name: name,
       accountIdentifier: accountIdentifier,
       accessMethodTree: accessMethods,
+      serviceUrl: serviceUrl,
     );
   }
 }

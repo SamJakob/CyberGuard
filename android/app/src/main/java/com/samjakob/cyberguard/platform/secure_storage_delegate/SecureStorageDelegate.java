@@ -5,6 +5,8 @@ import android.content.Context;
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 
+import java.util.Map;
+
 import io.flutter.plugin.common.MethodChannel;
 
 public abstract class SecureStorageDelegate {
@@ -28,6 +30,9 @@ public abstract class SecureStorageDelegate {
     public abstract String getDelegateName();
     @NonNull
     public abstract String getEncryptionSchemeName();
+    public abstract boolean hasAdditionalData();
+    @NonNull
+    public abstract Map<String, Object> getAdditionalData();
 
     @NonNull
     public abstract String getStorageLocation();

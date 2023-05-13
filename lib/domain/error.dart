@@ -1,19 +1,29 @@
 import 'package:cyberguard/const/branding.dart';
 
 class CGCompatibilityError extends Error {
+  final String reason;
+
+  CGCompatibilityError({final String? reason})
+      : reason =
+            reason ?? "$kAppName is currently not supported on your device.";
+
   @override
   String toString() {
-    return "$kAppName is currently not supported on your device.";
+    return reason;
   }
 }
 
 class CGSecurityCompatibilityError extends CGCompatibilityError {
-  final String? reason;
+  CGSecurityCompatibilityError({final String? reason})
+      : super(
+            reason: reason ??
+                "$kAppName is currently not supported on your device because it does not meet security requirements.");
+}
 
-  CGSecurityCompatibilityError({this.reason});
-
-  @override
-  String toString() {
-    return "$kAppName is currently not supported on your device because it does not meet security requirements.";
-  }
+class CGUserPresenceCompatibilityError extends CGCompatibilityError {
+  CGUserPresenceCompatibilityError({final String? reason})
+      : super(
+          reason: reason ??
+              "$kAppName is currently not supported on your device because it does not support the necessary features.",
+        );
 }

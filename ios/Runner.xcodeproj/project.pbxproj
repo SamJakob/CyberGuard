@@ -13,6 +13,8 @@
 		391264CD29E2E89800664420 /* CGAUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 391264CC29E2E89800664420 /* CGAUtilities.m */; };
 		391264D329E35F4800664420 /* SecureStorageDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391264D229E35F4800664420 /* SecureStorageDelegate.swift */; };
 		393499C429E5436200896019 /* KeychainInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393499C329E5436200896019 /* KeychainInterface.swift */; };
+		39F478112A0DD2310049AC7C /* UserPresenceDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F478102A0DD2310049AC7C /* UserPresenceDelegate.swift */; };
+		39F478132A0DD2760049AC7C /* CGAUserPresence.m in Sources */ = {isa = PBXBuildFile; fileRef = 39F478122A0DD2760049AC7C /* CGAUserPresence.m */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		978B8F6F1D3862AE00F588F7 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AFFD8EE1D35381100E5BB4D /* AppDelegate.m */; };
 		97C146F31CF9000F007C117D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 97C146F21CF9000F007C117D /* main.m */; };
@@ -48,6 +50,9 @@
 		391264CE29E35AA800664420 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		391264D229E35F4800664420 /* SecureStorageDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStorageDelegate.swift; sourceTree = "<group>"; };
 		393499C329E5436200896019 /* KeychainInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainInterface.swift; sourceTree = "<group>"; };
+		39F478102A0DD2310049AC7C /* UserPresenceDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPresenceDelegate.swift; sourceTree = "<group>"; };
+		39F478122A0DD2760049AC7C /* CGAUserPresence.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CGAUserPresence.m; sourceTree = "<group>"; };
+		39F478142A0DD29D0049AC7C /* CGAUserPresence.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CGAUserPresence.h; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		6D7DF4119041BAE58D00B2FF /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
@@ -104,9 +109,12 @@
 		391264C629DE3DF800664420 /* Platform */ = {
 			isa = PBXGroup;
 			children = (
+				39F4780F2A0DD2220049AC7C /* UserPresenceDelegate */,
 				3910767229EB0AD70077A17E /* SecureStorageDelegate */,
 				391264C729DE3E2800664420 /* CGASecureStorage.m */,
 				391264C929E2E5C300664420 /* CGASecureStorage.h */,
+				39F478122A0DD2760049AC7C /* CGAUserPresence.m */,
+				39F478142A0DD29D0049AC7C /* CGAUserPresence.h */,
 			);
 			path = Platform;
 			sourceTree = "<group>";
@@ -118,6 +126,14 @@
 				391264CC29E2E89800664420 /* CGAUtilities.m */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		39F4780F2A0DD2220049AC7C /* UserPresenceDelegate */ = {
+			isa = PBXGroup;
+			children = (
+				39F478102A0DD2310049AC7C /* UserPresenceDelegate.swift */,
+			);
+			path = UserPresenceDelegate;
 			sourceTree = "<group>";
 		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
@@ -268,6 +284,7 @@
 			files = (
 			);
 			inputPaths = (
+				"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}",
 			);
 			name = "Thin Binary";
 			outputPaths = (
@@ -323,7 +340,9 @@
 				978B8F6F1D3862AE00F588F7 /* AppDelegate.m in Sources */,
 				391264CD29E2E89800664420 /* CGAUtilities.m in Sources */,
 				393499C429E5436200896019 /* KeychainInterface.swift in Sources */,
+				39F478112A0DD2310049AC7C /* UserPresenceDelegate.swift in Sources */,
 				97C146F31CF9000F007C117D /* main.m in Sources */,
+				39F478132A0DD2760049AC7C /* CGAUserPresence.m in Sources */,
 				3910767529EB0B210077A17E /* Errors.swift in Sources */,
 				391264C829DE3E2800664420 /* CGASecureStorage.m in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,

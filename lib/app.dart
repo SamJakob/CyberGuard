@@ -3,6 +3,8 @@ import 'package:cyberguard/data/storage/accounts.dart';
 import 'package:cyberguard/data/struct/account.dart';
 import 'package:cyberguard/domain/error.dart';
 import 'package:cyberguard/domain/providers/account.dart';
+import 'package:cyberguard/domain/providers/settings.dart';
+import 'package:cyberguard/domain/providers/user_presence.dart';
 import 'package:cyberguard/interface/screens/account.dart';
 import 'package:cyberguard/interface/screens/root.dart';
 import 'package:cyberguard/interface/screens/root/accounts.dart';
@@ -10,7 +12,7 @@ import 'package:cyberguard/interface/screens/root/connections.dart';
 import 'package:cyberguard/interface/screens/root/home.dart';
 import 'package:cyberguard/interface/screens/root/multi_factor.dart';
 import 'package:cyberguard/interface/screens/settings.dart';
-import 'package:cyberguard/interface/utility/interface_protector.dart';
+import 'package:cyberguard/interface/interface.dart';
 import 'package:cyberguard/locator.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/foundation.dart';
@@ -67,7 +69,7 @@ final _router = GoRouter(
               RootScreen.createTabPageBuilder(
             context,
             state,
-            const ConnectionsScreen(),
+            ConnectionsScreen(),
           ),
         ),
         GoRoute(
@@ -77,7 +79,7 @@ final _router = GoRouter(
               RootScreen.createTabPageBuilder(
             context,
             state,
-            const MultiFactorScreen(),
+            MultiFactorScreen(),
           ),
         )
       ],
@@ -101,7 +103,7 @@ class CGApp extends StatelessWidget {
           useMaterial3: true,
           fontFamily: "Source Sans Pro",
           colors: kAppColorScheme.light,
-        ),
+        ).copyWith(scaffoldBackgroundColor: const Color(0xFFFBF8FF)),
         darkTheme: FlexThemeData.dark(
           useMaterial3: true,
           fontFamily: "Source Sans Pro",
@@ -112,16 +114,30 @@ class CGApp extends StatelessWidget {
         themeAnimationDuration: const Duration(milliseconds: 250),
         routerConfig: _router,
         builder: (final BuildContext context, final Widget? child) {
-          return InterfaceProtector(
+          return Interface<_CGAppInitData>(
             initializeApp: (final BuildContext context,
                 final InterfaceProtectorMessenger interfaceProtector) async {
               final accountStorage = AccountStorageService();
-              await accountStorage.initialize().catchError((final dynamic e) {
-                if (kDebugMode) print(e);
+              UserPresenceProvider? userPresenceProvider;
+
+              try {
+                await Future.wait([
+                  // Initialize the account storage service.
+                  accountStorage.initialize(),
+                  // Initialize the user presence provider.
+                  Future(() async {
+                    userPresenceProvider =
+                        await UserPresenceProvider.initialize();
+                  }),
+                ]);
+              } catch (error) {
+                if (kDebugMode) print(error);
 
                 String? message;
-                if (e is CGSecurityCompatibilityError) {
-                  message = e.reason;
+                if (error is CGSecurityCompatibilityError) {
+                  message = error.reason;
+                } else if (error is CGUserPresenceCompatibilityError) {
+                  message = error.reason;
                 } else {
                   message =
                       "Your device's operating system does not appear to be compatible with CyberGuard.";
@@ -135,19 +151,34 @@ class CGApp extends StatelessWidget {
                   shouldThrowOnFailure: true,
                   overrideLoading: true,
                 );
-              });
+              }
 
+              if (!accountStorage.isInitialized) return null;
+              if (userPresenceProvider == null) return null;
+
+              await setupLocator();
               locator.registerSingleton<AccountStorageService>(accountStorage);
-              return await accountStorage.load();
+
+              return _CGAppInitData(
+                initialAccounts: await accountStorage.load(),
+                userPresenceProvider: userPresenceProvider!,
+              );
             },
-            interfaceBuilder: (final BuildContext context, final dynamic data) {
+            interfaceBuilder: (final BuildContext context, final data) {
               return ProviderScope(
                 overrides: [
-                  accountProvider.overrideWith(
-                    (final ref) => AccountsNotifier(
-                      initialAccounts: data as Map<String, Account>?,
+                  settingsProvider.overrideWith(
+                    (final ref) => SettingsProvider(),
+                  ),
+                  accountsProvider.overrideWith(
+                    (final ref) => AccountsProvider(
+                      initialAccounts: data?.initialAccounts,
                     ),
-                  )
+                  ),
+                  if (data?.userPresenceProvider != null)
+                    userPresenceProvider.overrideWith(
+                      (final ref) => data!.userPresenceProvider,
+                    ),
                 ],
                 child: child!,
               );
@@ -157,4 +188,31 @@ class CGApp extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A container for the data that is initialized with the [Interface] widget's
+/// [initializeApp] callback and subsequently passed to the [Interface]'s
+/// [interfaceBuilder] callback.
+///
+/// This is, for example, used to initialize services and providers that are
+/// used by the application, whilst also allowing the [Interface] to display
+/// loading and error states for this.
+///
+/// This class existing and being passed indicates a successful initialization,
+/// and null will be passed if the initialization failed, so none of the fields
+/// in this class should be nullable (unless they are actually optional).
+class _CGAppInitData {
+  const _CGAppInitData({
+    required this.initialAccounts,
+    required this.userPresenceProvider,
+  });
+
+  /// If there are any [initialAccounts] that were loaded from storage, they
+  /// will be passed here.
+  final Map<String, Account>? initialAccounts;
+
+  /// The user presence provider, once initialized, will be passed here.
+  /// The initialization step ensures that there is a compliant implementation
+  /// and device capabilities to support the user presence feature.
+  final UserPresenceProvider userPresenceProvider;
 }

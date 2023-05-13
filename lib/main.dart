@@ -5,7 +5,7 @@ import 'locator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await setupLocator();
+  await setupLocatorEarly();
 
   runApp(
     const CGApp(),

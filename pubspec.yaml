@@ -28,6 +28,7 @@ dependencies:
   url_launcher: ^6.1.10
   async: ^2.10.0
   messagepack: ^0.2.1
+  shared_preferences: ^2.1.1
 
   ### USER INTERFACE
   heroicons: ^0.8.0
@@ -61,6 +62,7 @@ flutter:
     - res/flare/loader.flr
     - res/rive/cyberguard-loader.riv
     - assets/images/cg-icon.png
+    - assets/images/cg-icon-fg.png
 
   # Add custom fonts.
   fonts:

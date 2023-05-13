@@ -5,36 +5,17 @@ import 'package:cyberguard/const/channels.dart';
 import 'package:cyberguard/const/debugging.dart';
 import 'package:cyberguard/data/struct/platform_message.dart';
 import 'package:cyberguard/domain/error.dart';
+import 'package:cyberguard/domain/services/abstract/serialization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
-/// A delegate that may be used to serialize and deserialize data from generic
-/// types [T] and [U].
-///
-/// Serialization occurs from [T] -> [U].
-/// Deserialization occurs from [U] -> [T].
-///
-/// This is used by [StorageService] to convert data passed to it in an
-/// application-usable (i.e., hydrated [T] format) to a storage-usable (i.e.,
-/// dehydrated [U] format) and vice versa.
-abstract class SerializationService<T, U> {
-  /// Instantiates a new instance of [T].
-  T instantiate();
-
-  /// Serializes data into [U] format, from [T] format, for storage.
-  U? serialize(final T? data);
-
-  /// Deserializes data from [U] format, into [T] format, for use.
-  T? deserialize(final U? data);
-}
-
-/// A storage service that stores [T] data in [U] format.
-abstract class StorageService<T, U> {
+/// A storage service that stores [DataType] data in [SerializedDataType] format.
+abstract class StorageService<DataType, SerializedDataType> {
   /// The storage service name. This is used to determine the base key, under which
   /// stored data is saved.
   final String name;
 
-  final SerializationService<T, U> serializationService;
+  final SerializationService<DataType, SerializedDataType> serializationService;
 
   bool _isInitialized = false;
 
@@ -57,7 +38,9 @@ abstract class StorageService<T, U> {
     _isInitialized = true;
   }
 
-  U _ensureInitialized<U>(final U Function() beforeDoing) {
+  ValueType _ensureInitialized<ValueType>(
+    final ValueType Function() beforeDoing,
+  ) {
     if (!_isInitialized) {
       throw StateError(
           "Tried to use $runtimeType (Storage Service) but it wasn't initialized.");
@@ -84,27 +67,27 @@ abstract class StorageService<T, U> {
   /// Fetches the stored data from at rest, performs any necessary steps to
   /// parse the data.
   /// Otherwise, returns null if no data is stored.
-  Future<T?> load();
+  Future<DataType?> load();
 
   /// Stores the data to rest. Performs any necessary steps to serialize the data.
-  Future<void> save(final T data);
+  Future<void> save(final DataType data);
 
   /// Deletes the data currently at rest.
   /// If there is no data stored at rest, this does nothing.
   Future<void> delete();
 }
 
-/// A storage service that stores [T] data as encrypted binary data, in a file.
+/// A storage service that stores [DataType] data as encrypted binary data, in a file.
 /// This service uses the CyberGuard Secure Storage platform channel to encrypt
 /// and decrypt the data with the device's Trusted Execution Environment (TEE).
-abstract class EncryptedFileStorageService<T>
-    extends StorageService<T, Uint8List> {
-  /// The reference to the Flutter Platform Channel for CyberGuard Secure Storage services.
-  static const _platformEncryption = MethodChannel(kSecureStorageChannel);
+abstract class EncryptedFileStorageService<DataType>
+    extends StorageService<DataType, Uint8List> {
+  /// A reference to the Flutter Platform Channel for CyberGuard Secure Storage services.
+  static const _secureStoragePlatform = MethodChannel(kSecureStorageChannel);
 
   /// The version of the platform channel implementation this service is expecting.
   /// Bump only for breaking changes.
-  static const _platformEncryptionVersion = 1;
+  static const _secureStoragePlatformVersion = 1;
 
   /// The identifier for the encryption key this storage service should use. Leave as
   /// null to use the default encryption key.
@@ -155,7 +138,6 @@ abstract class EncryptedFileStorageService<T>
 
     // Generate the encryption keys, if they have not already been generated.
     await _generateEncryptionKey(name: encryptionKeyIdentifier);
-
     super.initialize();
   }
 
@@ -170,7 +152,7 @@ abstract class EncryptedFileStorageService<T>
   /// it is not encrypted itself, nor is it intended to be. It may not be
   /// inherently secure, but it should be inaccessible to other apps.
   Future<Directory> _getPlatformStorageLocation() async {
-    final platformPath = (await _platformEncryption
+    final platformPath = (await _secureStoragePlatform
         .invokeMethod('getStorageLocation')) as String;
 
     // Normalize the platformPath by adding a trailing path seperator if there
@@ -206,7 +188,7 @@ abstract class EncryptedFileStorageService<T>
   /// [SerializationService.instantiate]) if there is no data to load
   /// (i.e., if the file does not exist).
   @override
-  Future<T?> load() async {
+  Future<DataType?> load() async {
     final storageFile = await _getServiceStorageFile();
 
     // If the data does not exist, check if there is a backup.
@@ -233,7 +215,7 @@ abstract class EncryptedFileStorageService<T>
   /// Encrypts the specified data, and writes the encrypted payload to disk for
   /// a subsequent [load] call.
   @override
-  Future<void> save(final T data) async {
+  Future<void> save(final DataType data) async {
     final storageFile = await _getServiceStorageFile();
     final backupFile = await _getServiceStorageBackupFile();
 
@@ -254,6 +236,7 @@ abstract class EncryptedFileStorageService<T>
       // exist.
       if (await storageFile.exists()) await storageFile.delete();
       if (await backupFile.exists()) await backupFile.delete();
+      return;
     }
 
     // Encrypt the data.
@@ -275,7 +258,7 @@ abstract class EncryptedFileStorageService<T>
   //region Platform Channel Code
 
   Future<Map<dynamic, dynamic>> _getPlatformChannelInfo() async {
-    return (await _platformEncryption
+    return (await _secureStoragePlatform
         .invokeMethod('ping')
         .timeout(const Duration(milliseconds: 1000))) as Map<dynamic, dynamic>;
   }
@@ -298,7 +281,7 @@ abstract class EncryptedFileStorageService<T>
       }
 
       return pingResponse['ping'] == 'pong' &&
-          (pingResponse['version'] as int) >= _platformEncryptionVersion;
+          (pingResponse['version'] as int) >= _secureStoragePlatformVersion;
     } catch (_) {
       return false;
     }
@@ -306,8 +289,8 @@ abstract class EncryptedFileStorageService<T>
 
   Future<PlatformEnhancedSecurityResponse>
       _checkEnhancedSecurityStatus() async {
-    Map<dynamic, dynamic> response =
-        await _platformEncryption.invokeMethod('enhancedSecurityStatus') as Map;
+    Map<dynamic, dynamic> response = await _secureStoragePlatform
+        .invokeMethod('enhancedSecurityStatus') as Map;
 
     return PlatformEnhancedSecurityResponse.fromMap(
       response.cast<String, dynamic>(),
@@ -319,7 +302,7 @@ abstract class EncryptedFileStorageService<T>
     // If (and only if) the device is a simulator, don't run this method.
     if (_isSimulator) return await simulateWait(SimulatedWaitDuration.medium);
 
-    (await _platformEncryption.invokeMethod(
+    (await _secureStoragePlatform.invokeMethod(
         'generateKey', {"name": name, "overwriteIfExists": overwriteIfExists}));
   }
 
@@ -335,7 +318,7 @@ abstract class EncryptedFileStorageService<T>
     // required to encrypt and decrypt the data.
     final compressedData = gzip.encode(data);
 
-    final result = (await _platformEncryption.invokeMethod('encrypt', {
+    final result = (await _secureStoragePlatform.invokeMethod('encrypt', {
       "name": encryptionKeyIdentifier,
       "data": compressedData,
     })) as Uint8List;
@@ -351,7 +334,8 @@ abstract class EncryptedFileStorageService<T>
     }
 
     // Decrypt the data.
-    final decryptedData = (await _platformEncryption.invokeMethod('decrypt', {
+    final decryptedData =
+        (await _secureStoragePlatform.invokeMethod('decrypt', {
       "name": encryptionKeyIdentifier,
       "data": data,
     })) as Uint8List;
@@ -360,14 +344,4 @@ abstract class EncryptedFileStorageService<T>
   }
 
   //endregion
-
-  Future<void> test() async {
-    const String payload = "Howdy, pardner!";
-
-    Uint8List encrypted =
-        await _encrypt(data: Uint8List.fromList(payload.codeUnits));
-    Uint8List decrypted = await _decrypt(data: encrypted);
-
-    print("Decrypted: ${String.fromCharCodes(decrypted)}");
-  }
 }

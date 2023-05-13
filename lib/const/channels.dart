@@ -1,3 +1,5 @@
 // NATIVE COMMUNICATIONS CHANNELS.
 
-const kSecureStorageChannel = "com.samjakob.cyberguard/secure_storage";
+const kChannelPrefix = "com.samjakob.cyberguard";
+const kSecureStorageChannel = "$kChannelPrefix/secure_storage";
+const kUserPresenceChannel = "$kChannelPrefix/user_presence";

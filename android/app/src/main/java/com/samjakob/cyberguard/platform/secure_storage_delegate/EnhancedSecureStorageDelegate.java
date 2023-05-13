@@ -1,10 +1,14 @@
 package com.samjakob.cyberguard.platform.secure_storage_delegate;
 
 import android.content.Context;
+import android.content.pm.FeatureInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.security.keystore.UserNotAuthenticatedException;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
@@ -22,6 +26,10 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
@@ -79,6 +87,48 @@ public class EnhancedSecureStorageDelegate extends SecureStorageDelegate {
         return EncryptionSchemeFactory.nameFor(encryptionScheme);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private int getFeatureVersion(String featureName) {
+        FeatureInfo[] features = context.getPackageManager().getSystemAvailableFeatures();
+        for (FeatureInfo feature : features) {
+            if (feature.name.equals(featureName)) {
+                return feature.version;
+            }
+        }
+
+        throw new IllegalArgumentException(String.format("%s is not supported on this device.", featureName));
+    }
+
+    @Override
+    public boolean hasAdditionalData() {
+        return true;
+    }
+
+    @NonNull
+    @Override
+    public Map<String, Object> getAdditionalData() {
+        Map<String, Object> additionalData = new LinkedHashMap<>();
+
+        if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_HARDWARE_KEYSTORE)) {
+            additionalData.put("tpm_type", "Hardware-Backed Keymaster (TEE)");
+            additionalData.put("tpm_type_label", "TPM Type");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                additionalData.put("tpm_version", getFeatureVersion(PackageManager.FEATURE_HARDWARE_KEYSTORE));
+                additionalData.put("tpm_version_label", "TPM Version");
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+            additionalData.put("tpm_type", "StrongBox Keymaster");
+            additionalData.put("tpm_type_label", "TPM Type");
+            additionalData.put("tpm_version", getFeatureVersion(PackageManager.FEATURE_STRONGBOX_KEYSTORE));
+            additionalData.put("tpm_version_label", "TPM Version");
+        }
+
+        return additionalData;
+    }
+
     @NonNull
     @Override
     public String getStorageLocation() {
@@ -90,11 +140,13 @@ public class EnhancedSecureStorageDelegate extends SecureStorageDelegate {
         // specified.
         name = byNameOrDefault(name);
 
-        deleteKey(name);
-
         // Skip key generation if the key already exists and overwriteIfExists was
-        // not explicitly set.
-        if (!overwriteIfExists && hasKey(name)) { return; }
+        // not explicitly set, otherwise if the key DOES exist, delete it to allow
+        // the key to be regenerated.
+        if (hasKey(name)) {
+            if (overwriteIfExists) deleteKey(name);
+            else return;
+        }
 
         encryptionScheme.generateKeyPair(mainActivity, context, appKeyStore, name);
     }

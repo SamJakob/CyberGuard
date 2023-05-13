@@ -18,7 +18,7 @@ class AccountRef {
   }
 }
 
-class AccountsNotifier extends ChangeNotifier {
+class AccountsProvider extends ChangeNotifier {
   final Map<String, Account> _accounts;
 
   /// Returns a copy of the entire [accounts] map.
@@ -35,7 +35,7 @@ class AccountsNotifier extends ChangeNotifier {
           AccountRef(entry.key, entry.value))
       .toList();
 
-  AccountsNotifier({final Map<String, Account>? initialAccounts})
+  AccountsProvider({final Map<String, Account>? initialAccounts})
       : _accounts = initialAccounts ?? <String, Account>{};
 
   /// Generate a unique ID for the account.
@@ -110,5 +110,5 @@ class AccountsNotifier extends ChangeNotifier {
   }
 }
 
-final accountProvider =
-    ChangeNotifierProvider<AccountsNotifier>((final ref) => throw TypeError());
+final accountsProvider =
+    ChangeNotifierProvider<AccountsProvider>((final ref) => throw TypeError());

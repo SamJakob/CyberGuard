@@ -1,9 +1,9 @@
 import 'package:cyberguard/domain/providers/account.dart';
+import 'package:cyberguard/interface/partials/account_tile.dart';
 import 'package:cyberguard/interface/partials/root_app_bar.dart';
 import 'package:cyberguard/interface/pages/add_account.dart';
 import 'package:cyberguard/interface/utility/context.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -14,7 +14,7 @@ class AccountsScreen extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    final List<AccountRef> accounts = ref.watch(accountProvider).allAccounts;
+    final List<AccountRef> accounts = ref.watch(accountsProvider).allAccounts;
 
     return Stack(
       children: [
@@ -46,20 +46,7 @@ class AccountsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverFixedExtentList(
-                itemExtent: 50.0,
-                delegate: SliverChildBuilderDelegate(
-                  childCount: accounts.length,
-                  (final context, final index) {
-                    return ListTile(
-                      title: Text("${accounts[index]}"),
-                      onTap: () {
-                        context.go("/accounts/${accounts[index].id}");
-                      },
-                    );
-                  },
-                ),
-              )
+              ..._renderAccounts(context, accounts),
             ],
           ),
         ),
@@ -79,5 +66,91 @@ class AccountsScreen extends ConsumerWidget {
         )
       ],
     );
+  }
+
+  List<Widget> _renderAccounts(
+    final BuildContext context,
+    final List<AccountRef> accounts,
+  ) {
+    if (accounts.isEmpty) {
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              HeroIcon(
+                HeroIcons.magnifyingGlassMinus,
+                size: 48,
+              ),
+              SizedBox(height: 12),
+              Text(
+                "No Accounts",
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                "You haven't added any accounts yet!",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                "Tap 'Add Account' in the bottom right to get started!",
+              ),
+            ],
+          ),
+        )
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            childCount: accounts.length,
+            (final context, final index) {
+              return AccountTile(
+                accountRef: accounts[index],
+              );
+            },
+          ),
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 10, bottom: 100),
+          child: Center(
+            child: Column(
+              children: [
+                Text(
+                  "${accounts.length} Account${accounts.length == 1 ? "" : "s"}",
+                  style: TextStyle(
+                    height: 1,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: context.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+                Text(
+                  "You've reached the end!",
+                  style: TextStyle(
+                    height: 1,
+                    color: context.colorScheme.onSurface.withOpacity(0.5),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ];
   }
 }

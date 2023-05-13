@@ -2,11 +2,13 @@
 #import "GeneratedPluginRegistrant.h"
 
 #import "Platform/CGASecureStorage.h"
+#import "Platform/CGAUserPresence.h"
 
 // ---
 
 #define CHANNEL_PREFIX "com.samjakob.cyberguard"
-#define SECURE_STORAGE_CHANNEL (CHANNEL_PREFIX "/secure_storage")
+#define SECURE_STORAGE_CHANNEL  (CHANNEL_PREFIX "/secure_storage")
+#define USER_PRESENCE_CHANNEL   (CHANNEL_PREFIX "/user_presence")
 
 // ---
 
@@ -18,6 +20,7 @@
     
     // Bind to secure platform storage handler.
     [CGASecureStoragePlatformHandler bind:controller withName:@SECURE_STORAGE_CHANNEL];
+    [CGAUserPresencePlatformHandler bind:controller withName:@USER_PRESENCE_CHANNEL];
     
     // Override point for customization after application launch.
     [GeneratedPluginRegistrant registerWithRegistry:self];

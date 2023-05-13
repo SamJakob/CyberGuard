@@ -24,7 +24,7 @@ public class SecureStorageDelegateError extends RuntimeException {
     public SecureStorageDelegateError(String message, Exception underlyingException) {
         this.message = message != null
                 ? message
-                : "There was a problem whilst preparing the secure storage environment (" + underlyingException.getMessage() + ")";
+                : "There was a problem whilst preparing the secure storage environment";
         this.underlyingException = underlyingException;
     }
 

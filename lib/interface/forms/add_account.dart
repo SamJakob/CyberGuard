@@ -58,7 +58,7 @@ class AddAccountFormState extends ConsumerState<AddAccountForm> {
   }
 
   String? checkForNameAndAccountIdentifierCombo() {
-    return ref.read(accountProvider).hasNameAndAccountIdentifier(
+    return ref.read(accountsProvider).hasNameAndAccountIdentifier(
               name: _nameController.text,
               accountIdentifier: _accountIdentifierController.text,
             )
@@ -111,6 +111,7 @@ class AddAccountFormState extends ConsumerState<AddAccountForm> {
               }
               return null;
             },
+            autocorrect: false,
             decoration: const InputDecoration(
               isDense: true,
               labelText: "Username, Email or ID *",

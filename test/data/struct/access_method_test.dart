@@ -222,24 +222,17 @@ void main() {
   });
 
   group('test serialization and deserialization', () {
-    AccessMethodConjunction conjunction;
-    KnowledgeAccessMethod password;
-    TemporalAccessMethod smsCode;
-    PhysicalAccessMethod cellPhone;
-    KnowledgeAccessMethod cellPhonePin;
-
     late AccessMethodTree googleAccountRequirements;
 
     setUp(() {
       googleAccountRequirements = AccessMethodTree({
-        conjunction = AccessMethodConjunction({
-          password = KnowledgeAccessMethod('mypassword', label: 'Password'),
-          smsCode = TemporalAccessMethod(
+        AccessMethodConjunction({
+          KnowledgeAccessMethod('mypassword', label: 'Password'),
+          TemporalAccessMethod(
               label: 'SMS Two-Factor Authentication Code',
               methods: {
-                cellPhone = PhysicalAccessMethod(label: 'Cell Phone', methods: {
-                  cellPhonePin =
-                      KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
+                PhysicalAccessMethod(label: 'Cell Phone', methods: {
+                  KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
                 }),
               }),
         }),

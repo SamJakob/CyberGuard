@@ -74,8 +74,8 @@
         // Check storagePath exists.
         NSError* error;
         FlutterError* appStorageError = [FlutterError errorWithCode:@"STORAGE_LOCATION_FAILURE"
-                                                            message:@"There was a problem preparing app storage."
-                                                            details:nil];
+            message:@"There was a problem preparing app storage."
+            details:nil];
         
         // Fetch the storage location from the file manager.
         NSFileManager* fileManager = [NSFileManager defaultManager];

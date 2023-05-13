@@ -5,9 +5,16 @@ import 'package:heroicons/heroicons.dart';
 
 const tabs = [
   _RootScreenTab(target: '/', icon: HeroIcon(HeroIcons.home), label: "Home"),
-  _RootScreenTab(target: '/accounts', icon: HeroIcon(HeroIcons.key), label: "Accounts"),
-  _RootScreenTab(target: '/connections', icon: HeroIcon(HeroIcons.lightBulb), label: "Connections"),
-  _RootScreenTab(target: '/multi-factor', icon: HeroIcon(HeroIcons.qrCode), label: "Multi-Factor"),
+  _RootScreenTab(
+      target: '/accounts', icon: HeroIcon(HeroIcons.key), label: "Accounts"),
+  _RootScreenTab(
+      target: '/connections',
+      icon: HeroIcon(HeroIcons.lightBulb),
+      label: "Connections"),
+  _RootScreenTab(
+      target: '/multi-factor',
+      icon: HeroIcon(HeroIcons.qrCode),
+      label: "Multi-Factor"),
 ];
 
 class RootScreen extends StatelessWidget {
@@ -15,7 +22,8 @@ class RootScreen extends StatelessWidget {
   const RootScreen({final Key? key, required this.child}) : super(key: key);
 
   /// Creates a [CustomTransitionPage] for a RootScreen tab.
-  static Page<void> createTabPageBuilder(final BuildContext context, final GoRouterState state, final Widget child) {
+  static Page<void> createTabPageBuilder(final BuildContext context,
+      final GoRouterState state, final Widget child) {
     return NoTransitionPage<void>(
       key: state.pageKey,
       child: child,
@@ -25,7 +33,8 @@ class RootScreen extends StatelessWidget {
   /// Returns the currently selected index (or null if an index couldn't be found).
   int? getCurrentIndex(final BuildContext context) {
     final currentLocation = GoRouter.of(context).location;
-    final index = tabs.indexWhere((final tab) => tab.target.startsWith(currentLocation));
+    final index =
+        tabs.indexWhere((final tab) => tab.target.startsWith(currentLocation));
     return index < 0 ? null : index;
   }
 
@@ -51,8 +60,10 @@ class RootScreen extends StatelessWidget {
     if (currentIndex == null) {
       return Container(
         color: ElevationOverlay.applySurfaceTint(
-          NavigationBarTheme.of(context).backgroundColor ?? context.colorScheme.surface,
-          NavigationBarTheme.of(context).surfaceTintColor ?? context.colorScheme.surfaceTint,
+          NavigationBarTheme.of(context).backgroundColor ??
+              context.colorScheme.surface,
+          NavigationBarTheme.of(context).surfaceTintColor ??
+              context.colorScheme.surfaceTint,
           NavigationBarTheme.of(context).elevation ?? 3.0,
         ),
         child: SafeArea(
@@ -64,7 +75,8 @@ class RootScreen extends StatelessWidget {
       );
     } else {
       return NavigationBar(
-        onDestinationSelected: (final index) => activateSelectedIndex(context, index),
+        onDestinationSelected: (final index) =>
+            activateSelectedIndex(context, index),
         selectedIndex: currentIndex,
         destinations: tabs,
       );

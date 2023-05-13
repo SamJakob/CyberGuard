@@ -45,20 +45,20 @@ class InterfaceProtectorOverlays {
 }
 
 class InterfaceProtectorMessenger {
-  final _InterfaceProtectorState? _state;
+  final _InterfaceState<dynamic>? _state;
 
   InterfaceProtectorMessenger.of(final BuildContext context)
-      : _state = context.findAncestorStateOfType<_InterfaceProtectorState>();
+      : _state = context.findAncestorStateOfType<_InterfaceState<dynamic>>();
 
-  InterfaceProtectorMessenger._withState(final _InterfaceProtectorState state)
+  InterfaceProtectorMessenger._withState(final _InterfaceState<dynamic> state)
       : _state = state;
 
-  /// Attempts to insert the specified overlay into the [InterfaceProtector], if it
+  /// Attempts to insert the specified overlay into the [Interface], if it
   /// is mounted. Otherwise, does nothing. Specify [shouldThrowOnFailure] if this
-  /// call should throw an error on failure to locate an [InterfaceProtector]
+  /// call should throw an error on failure to locate an [Interface]
   /// ancestor.
   ///
-  /// Specify [blockChanges] if the [InterfaceProtector] should stop watching for
+  /// Specify [blockChanges] if the [Interface] should stop watching for
   /// status changes (e.g., to display a single screen and prevent interaction).
   void insertBlurOverlay(
     final BlurOverlay overlay, {
@@ -76,34 +76,35 @@ class InterfaceProtectorMessenger {
   }
 }
 
-typedef InterfaceBuilder = Widget Function(
-    BuildContext context, dynamic initializationData);
+typedef InterfaceBuilder<InterfaceInitData> = Widget Function(
+    BuildContext context, InterfaceInitData? initializationData);
 
-class InterfaceProtector extends StatefulWidget {
+class Interface<InterfaceInitData> extends StatefulWidget {
   /// A builder that renders the application's interface.
-  final InterfaceBuilder interfaceBuilder;
+  final InterfaceBuilder<InterfaceInitData> interfaceBuilder;
 
-  final Future<dynamic> Function(BuildContext, InterfaceProtectorMessenger)?
-      initializeApp;
+  final Future<InterfaceInitData?> Function(
+      BuildContext, InterfaceProtectorMessenger)? initializeApp;
 
-  const InterfaceProtector({
+  const Interface({
     final Key? key,
     required this.interfaceBuilder,
     this.initializeApp,
   }) : super(key: key);
 
   @override
-  State<InterfaceProtector> createState() => _InterfaceProtectorState();
+  State<Interface<InterfaceInitData>> createState() =>
+      _InterfaceState<InterfaceInitData>();
 }
 
-enum _InterfaceState { uninitialized, initializing, initialized, error }
+enum _InterfaceInitState { uninitialized, initializing, initialized, error }
 
-class _InterfaceProtectorState extends State<InterfaceProtector>
-    with WidgetsBindingObserver {
+class _InterfaceState<InterfaceInitData>
+    extends State<Interface<InterfaceInitData>> with WidgetsBindingObserver {
   final GlobalKey<OverlayState> overlayKey = GlobalKey<OverlayState>();
 
   bool _changesBlocked = false;
-  _InterfaceState _initializationState = _InterfaceState.uninitialized;
+  _InterfaceInitState _initializationState = _InterfaceInitState.uninitialized;
 
   bool _loading = true;
 
@@ -163,10 +164,10 @@ class _InterfaceProtectorState extends State<InterfaceProtector>
 
   @override
   Widget build(final BuildContext context) {
-    dynamic initializationResult;
+    InterfaceInitData? initializationResult;
 
-    if (_initializationState == _InterfaceState.uninitialized) {
-      _initializationState = _InterfaceState.initializing;
+    if (_initializationState == _InterfaceInitState.uninitialized) {
+      _initializationState = _InterfaceInitState.initializing;
 
       WidgetsBinding.instance.addPostFrameCallback((final _) async {
         if (widget.initializeApp != null) {
@@ -177,14 +178,14 @@ class _InterfaceProtectorState extends State<InterfaceProtector>
               InterfaceProtectorMessenger._withState(this),
             );
             setState(() {
-              _initializationState = _InterfaceState.initialized;
+              _initializationState = _InterfaceInitState.initialized;
             });
             setLoading(false);
           } catch (ex) {
             if (kDebugMode) print(ex);
 
             setState(() {
-              _initializationState = _InterfaceState.error;
+              _initializationState = _InterfaceInitState.error;
             });
             setLoading(false);
 
@@ -214,8 +215,10 @@ class _InterfaceProtectorState extends State<InterfaceProtector>
             // Show a black screen on the interface entry in the widget tree
             // until the application is initialized.
             // The loader will be overlayed on top of this.
-            if ([_InterfaceState.uninitialized, _InterfaceState.initializing]
-                .contains(_initializationState)) {
+            if ([
+              _InterfaceInitState.uninitialized,
+              _InterfaceInitState.initializing
+            ].contains(_initializationState)) {
               return Container(color: Colors.black);
             } else {
               return widget.interfaceBuilder(context, initializationResult);

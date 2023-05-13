@@ -171,7 +171,7 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
                             final formData = addAccountForm.getData();
 
                             String id = await ref
-                                .read(accountProvider)
+                                .read(accountsProvider)
                                 .add(Account(
                                   accountIdentifier: formData.accountIdentifier,
                                   name: formData.name,
@@ -211,7 +211,7 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
 
                             String id;
                             if (addAccountForm.hasPassword) {
-                              id = await ref.read(accountProvider).add(
+                              id = await ref.read(accountsProvider).add(
                                     Account.withPassword(
                                       formData.accountIdentifier,
                                       formData.password,
@@ -219,7 +219,7 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
                                     ),
                                   );
                             } else {
-                              id = await ref.read(accountProvider).add(
+                              id = await ref.read(accountsProvider).add(
                                     Account(
                                       accountIdentifier:
                                           formData.accountIdentifier,

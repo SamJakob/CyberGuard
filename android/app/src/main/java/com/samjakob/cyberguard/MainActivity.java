@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.samjakob.cyberguard.platform.CGASecureStorage;
+import com.samjakob.cyberguard.platform.CGAUserPresence;
 
 import io.flutter.embedding.android.FlutterFragmentActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -28,6 +29,7 @@ public class MainActivity extends FlutterFragmentActivity {
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
         CGASecureStorage.createSecureStorageChannel(flutterEngine, getApplicationContext(), this);
+        CGAUserPresence.createSecureStorageChannel(flutterEngine, getApplicationContext(), this);
     }
 
 }

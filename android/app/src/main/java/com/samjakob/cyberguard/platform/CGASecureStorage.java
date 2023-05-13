@@ -1,5 +1,7 @@
 package com.samjakob.cyberguard.platform;
 
+import static com.samjakob.cyberguard.utils.PlatformHelpers.checkIfSimulator;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -10,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.biometric.BiometricManager;
 
+import com.samjakob.cyberguard.BuildConfig;
 import com.samjakob.cyberguard.MainActivity;
 import com.samjakob.cyberguard.errors.MissingSecureStorageDelegateError;
 import com.samjakob.cyberguard.errors.SecureStorageDelegateError;
@@ -18,7 +21,6 @@ import com.samjakob.cyberguard.platform.secure_storage_delegate.EnhancedSecurity
 import com.samjakob.cyberguard.platform.secure_storage_delegate.SecureStorageDelegate;
 import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.EncryptionSchemeFactory;
 import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.HybridRSAEncryption;
-import com.samjakob.cyberguard.platform.secure_storage_delegate.scheme.FallbackAESEncryption;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -66,7 +68,6 @@ public class CGASecureStorage {
         if (isInitialized) return;
 
         // Initialize the CyberGuard encryption schemes.
-//        FallbackAESEncryption.registerScheme();
         HybridRSAEncryption.registerScheme();
 //        HybridECEncryption.registerScheme();
 
@@ -79,38 +80,42 @@ public class CGASecureStorage {
         SecureStorageDelegate currentSecureStorageDelegate = null;
         String storageDelegateWarning = null;
 
-        // Attempt to use the EnhancedSecureStorageDelegate if hasEnhancedSecurity
-        // is true.
-        if (hasEnhancedSecurity) {
-            KeyStore appKeyStore;
+        try {
+            // Attempt to use the EnhancedSecureStorageDelegate if hasEnhancedSecurity
+            // is true.
+            if (hasEnhancedSecurity) {
+                KeyStore appKeyStore;
 
-            try {
-                appKeyStore = KeyStore.getInstance("AndroidKeyStore");
-                appKeyStore.load(null);
-            } catch (Exception ex) {
-                throw new MissingSecureStorageDelegateError("We couldn't access the app encryption data.");
-            }
-
-            // Select the strongest eligible encryption scheme for the current device.
-            EncryptionSchemeFactory.EncryptionSchemeChoice encryptionSchemeChoice
-                    = EncryptionSchemeFactory.getEligibleScheme(context, appKeyStore);
-
-            storageDelegateWarning = encryptionSchemeChoice.message;
-
-            // Assuming a valid encryption scheme was found, attempt to start
-            // an enhanced secure storage delegate.
-            if (encryptionSchemeChoice.scheme != null) {
                 try {
-                    currentSecureStorageDelegate = new EnhancedSecureStorageDelegate(
-                        context,
-                        mainActivity,
-                        encryptionSchemeChoice.scheme,
-                        appKeyStore
-                    );
-                } catch (MissingSecureStorageDelegateError ex) {
-                    storageDelegateWarning = ex.getMessage();
+                    appKeyStore = KeyStore.getInstance("AndroidKeyStore");
+                    appKeyStore.load(null);
+                } catch (Exception ex) {
+                    throw new MissingSecureStorageDelegateError("We couldn't access the app encryption data.");
+                }
+
+                // Select the strongest eligible encryption scheme for the current device.
+                EncryptionSchemeFactory.EncryptionSchemeChoice encryptionSchemeChoice
+                        = EncryptionSchemeFactory.getEligibleScheme(context, appKeyStore);
+
+                storageDelegateWarning = encryptionSchemeChoice.message;
+
+                // Assuming a valid encryption scheme was found, attempt to start
+                // an enhanced secure storage delegate.
+                if (encryptionSchemeChoice.scheme != null) {
+                    try {
+                        currentSecureStorageDelegate = new EnhancedSecureStorageDelegate(
+                                context,
+                                mainActivity,
+                                encryptionSchemeChoice.scheme,
+                                appKeyStore
+                        );
+                    } catch (MissingSecureStorageDelegateError ex) {
+                        storageDelegateWarning = ex.getMessage();
+                    }
                 }
             }
+        } catch (Exception ex) {
+            if (BuildConfig.DEBUG) ex.printStackTrace();
         }
 
         // If the device has enhanced security and a registered delegate, indicate that
@@ -159,6 +164,9 @@ public class CGASecureStorage {
                 if (secureStorageDelegate != null) {
                     response.put("storage_encryption_delegate", secureStorageDelegate.getDelegateName());
                     response.put("storage_encryption_delegate_scheme", secureStorageDelegate.getEncryptionSchemeName());
+                    if (secureStorageDelegate.hasAdditionalData()) {
+                        response.put("storage_encryption_delegate_metadata", secureStorageDelegate.getAdditionalData());
+                    }
                 }
 
                 if (enhancedSecurityWarningMessage != null) {
@@ -286,34 +294,5 @@ public class CGASecureStorage {
             SECURE_STORAGE_CHANNEL
         ).setMethodCallHandler(secureStorage::handle);
     }
-
-    //region Platform Channel Helper Code
-
-    /**
-     * Employs a heuristic approach to determine if the Android
-     * device is a simulator, or real device.
-     */
-    private static boolean checkIfSimulator() {
-        boolean isEmulator;
-
-        // Check the radio version (if it's not set, or 1.0.0.0,
-        // the device must be an emulator).
-        String deviceRadioVersion = Build.getRadioVersion();
-        isEmulator = (deviceRadioVersion == null || deviceRadioVersion.isEmpty() || deviceRadioVersion.equals("1.0.0.0"));
-
-        // The approach used by Google's Firebase is to check for certain
-        // HARDWARE or PRODUCT attributes.
-        isEmulator |= (Build.PRODUCT.contains("sdk") ||
-                Build.HARDWARE.contains("goldfish") ||
-                Build.HARDWARE.contains("ranchu"));
-
-        // Finally, check if the PRODUCT is explicitly set to 'emulator'
-        // or 'simulator' (per Flutter's historic approach).
-        isEmulator |= (Build.PRODUCT.contains("emulator") ||
-                Build.PRODUCT.contains("simulator"));
-
-        return isEmulator;
-    }
-    //endregion
 
 }

@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:cyberguard/const/interface.dart';
+import 'package:cyberguard/interface/partials/app_word_mark.dart';
 import 'package:cyberguard/interface/utility/context.dart';
 import 'package:flutter/material.dart';
 
@@ -56,20 +57,25 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
   double get maxShrinkOffset => maxExtent - minExtent;
 
   @override
-  bool shouldRebuild(covariant final SliverPersistentHeaderDelegate oldDelegate) =>
+  bool shouldRebuild(
+          covariant final SliverPersistentHeaderDelegate oldDelegate) =>
       oldDelegate.maxExtent != maxExtent || oldDelegate.minExtent != minExtent;
 
   @override
-  Widget build(final BuildContext context, final double shrinkOffset, final bool overlapsContent) {
+  Widget build(final BuildContext context, final double shrinkOffset,
+      final bool overlapsContent) {
     const double curveStartFraction = 0.9;
     const double hideChildrenFraction = 0.6;
 
-    final double scrollPercentage = (shrinkOffset / maxShrinkOffset).clamp(0, 1);
+    final double scrollPercentage =
+        (shrinkOffset / maxShrinkOffset).clamp(0, 1);
 
-    final Widget? child = (childBuilder != null) ? childBuilder!(scrollPercentage) : null;
+    final Widget? child =
+        (childBuilder != null) ? childBuilder!(scrollPercentage) : null;
 
     return SizedBox(
-      height: (((maxExtent - minExtent) * (1 - scrollPercentage)) + minExtent) + 1,
+      height:
+          (((maxExtent - minExtent) * (1 - scrollPercentage)) + minExtent) + 1,
       child: ClipPath(
         clipper: scrollPercentage == 1
             ? null
@@ -78,7 +84,9 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
                 scrollPercentage: scrollPercentage,
               ),
         child: Container(
-          padding: EdgeInsets.only(bottom: (maxExtent * (1 - curveStartFraction)) * (1 - scrollPercentage)),
+          padding: EdgeInsets.only(
+              bottom: (maxExtent * (1 - curveStartFraction)) *
+                  (1 - scrollPercentage)),
           color: Theme.of(context).colorScheme.primaryContainer,
           child: SafeArea(
             top: true,
@@ -90,35 +98,15 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
                 SizedBox(
                   height: collapsedHeight,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: kSpaceUnitPx * 1.5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: kSpaceUnitPx * 1.5),
                     child: IconTheme(
-                      data: Theme.of(context).iconTheme.copyWith(color: context.colorScheme.onPrimaryContainer),
+                      data: Theme.of(context).iconTheme.copyWith(
+                          color: context.colorScheme.onPrimaryContainer),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Welcome back,",
-                                style: TextStyle(
-                                  color: context.colorScheme.onPrimaryContainer,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.normal,
-                                ),
-                              ),
-                              Text(
-                                "John",
-                                style: TextStyle(
-                                  height: 1.0,
-                                  color: context.colorScheme.onPrimaryContainer,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              )
-                            ],
-                          ),
+                          const AppWordMark(),
                           if (actions != null) ...[
                             const Spacer(),
                             ...actions!,
@@ -131,7 +119,9 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
                 Visibility(
                   visible: scrollPercentage <= hideChildrenFraction,
                   child: AnimatedOpacity(
-                    opacity: 1 - (scrollPercentage * (1 / hideChildrenFraction)).clamp(0, 1),
+                    opacity: 1 -
+                        (scrollPercentage * (1 / hideChildrenFraction))
+                            .clamp(0, 1),
                     duration: const Duration(milliseconds: 150),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -172,7 +162,8 @@ class _CGHomeSliverAppBarClipper extends CustomClipper<Path> {
 
   @override
   Path getClip(final Size size) {
-    final curveStart = size.height * lerpDouble(curveStartFraction, 1.0, scrollPercentage)!;
+    final curveStart =
+        size.height * lerpDouble(curveStartFraction, 1.0, scrollPercentage)!;
 
     final path = Path();
     path.lineTo(0.0, curveStart);
@@ -188,5 +179,6 @@ class _CGHomeSliverAppBarClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(covariant final CustomClipper<Path> oldClipper) => oldClipper != this;
+  bool shouldReclip(covariant final CustomClipper<Path> oldClipper) =>
+      oldClipper != this;
 }

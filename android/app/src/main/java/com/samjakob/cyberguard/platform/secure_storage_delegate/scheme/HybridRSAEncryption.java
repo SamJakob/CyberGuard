@@ -241,6 +241,8 @@ public class HybridRSAEncryption implements EncryptionScheme {
             // RSA-encrypt the header.
             PublicKey publicKey = appKeyStore.getCertificate(keyName).getPublicKey();
             Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
+            // This OAEPParameter spec MUST be specified, otherwise the data will fail to DECRYPT,
+            // EVEN AFTER encrypting successfully!!
             cipher.init(Cipher.ENCRYPT_MODE, publicKey, new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT));
             byte[] header = cipher.doFinal(rawHeader);
 
@@ -264,6 +266,8 @@ public class HybridRSAEncryption implements EncryptionScheme {
         try {
             PrivateKey privateKey = (PrivateKey) appKeyStore.getKey(keyName, null);
             Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
+            // This OAEPParameter spec MUST be specified, otherwise the data will fail to DECRYPT,
+            // EVEN AFTER encrypting successfully!!
             cipher.init(Cipher.DECRYPT_MODE, privateKey, new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT));
             return new BiometricPrompt.CryptoObject(cipher);
         } catch (UserNotAuthenticatedException ex) {

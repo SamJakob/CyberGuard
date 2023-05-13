@@ -3,20 +3,22 @@ import 'package:cyberguard/data/struct/platform_message.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-class SettingsService {
+/// Service that provides information about the device and the app for the
+/// settings screen.
+class SettingsInfoService {
   /// The reference to the Flutter Platform Channel for CyberGuard Secure Storage services.
   static const _platformEncryption = MethodChannel(kSecureStorageChannel);
 
   final PackageInfo packageInfo;
   final SecureStorageInfo secureStorageInfo;
 
-  SettingsService._({
+  SettingsInfoService._({
     required this.packageInfo,
     required this.secureStorageInfo,
   });
 
-  static Future<SettingsService> initialize() async {
-    return SettingsService._(
+  static Future<SettingsInfoService> initialize() async {
+    return SettingsInfoService._(
       packageInfo: await PackageInfo.fromPlatform(),
       secureStorageInfo: await _getSecureStorageInfo(),
     );
@@ -38,6 +40,7 @@ class SecureStorageInfo {
   String? secureStorageDelegate;
   String? secureStorageDelegateScheme;
   String? enhancedSecurityWarning;
+  Map<String, dynamic>? secureStorageDelegateMetadata;
 
   bool get hasEnhancedSecurityWarning => enhancedSecurityWarning != null;
   bool get hasSecureStorageDelegateInfo => secureStorageDelegate != null;
@@ -51,6 +54,7 @@ class SecureStorageInfo {
     this.secureStorageDelegate,
     this.secureStorageDelegateScheme,
     this.enhancedSecurityWarning,
+    this.secureStorageDelegateMetadata,
   });
 
   SecureStorageInfo.fromMap(final Map<dynamic, dynamic> data)
@@ -66,5 +70,8 @@ class SecureStorageInfo {
           secureStorageDelegateScheme:
               data['storage_encryption_delegate_scheme'] as String?,
           enhancedSecurityWarning: data['enhanced_security_warning'] as String?,
+          secureStorageDelegateMetadata:
+              (data['storage_encryption_delegate_metadata'] as Map?)
+                  ?.cast<String, dynamic>(),
         );
 }
