@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
-import 'package:cyberguard/data/struct/access_method.dart';
+import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -12,48 +12,65 @@ void main() {
   final previousExecutionInstant =
       DateTime.now().toUtc().subtract(const Duration(seconds: 3));
 
+  setUp(() {
+    AccessMethodStore.initialize();
+  });
+
   group("test access method", () {
+    tearDown(() {
+      AccessMethodStore().destroy();
+    });
+
     test("access method sub classes instantiate correctly", () {
       withClock(Clock.fixed(executionInstant), () {
-        var method = KnowledgeAccessMethod('mypassword', label: 'Password');
-        expect(method.priority, equals(-1));
-        expect(method.label, equals('Password'));
-        expect(method.added, equals(executionInstant));
-        expect(method.data, equals('mypassword'));
+        var methodRef = AccessMethodStore().register(
+          KnowledgeAccessMethod('mypassword', label: 'Password'),
+        );
 
-        var method2 = KnowledgeAccessMethod('mypassword', label: 'Password 2');
-        expect(method2.priority, equals(-1));
-        expect(method2.label, equals('Password 2'));
-        expect(method2.added, equals(executionInstant));
-        expect(method2.data, equals('mypassword'));
+        expect(methodRef.priority, equals(-1));
+        expect(methodRef.read.label, equals('Password'));
+        expect(methodRef.read.added, equals(executionInstant));
+        expect(methodRef.read.data, equals('mypassword'));
 
-        expect(method != method2, equals(true));
+        var methodRef2 = AccessMethodStore()
+            .register(KnowledgeAccessMethod('mypassword', label: 'Password 2'));
+        expect(methodRef2.priority, equals(-1));
+        expect(methodRef2.read.label, equals('Password 2'));
+        expect(methodRef2.read.added, equals(executionInstant));
+        expect(methodRef2.read.data, equals('mypassword'));
+
+        expect(methodRef != methodRef2, equals(true));
 
         // This is an access method, it has no nested access methods
-        // and therefore
-        expect(method.hasAccessMethods, equals(false));
-        expect(method.methods, equals(null));
+        // and therefore [hasAccessMethods] should be false and [methods]
+        // should be null.
+        expect(methodRef.read.hasAccessMethods, equals(false));
+        expect(methodRef.read.methods, equals(null));
 
-        late KnowledgeAccessMethod subMethod;
+        late AccessMethodRef<KnowledgeAccessMethod> subMethod;
         withClock(Clock.fixed(previousExecutionInstant), () {
-          subMethod = KnowledgeAccessMethod('1234', label: 'Cell Phone PIN');
+          subMethod = AccessMethodStore().register(
+            KnowledgeAccessMethod('1234', label: 'Cell Phone PIN'),
+          );
         });
 
-        var methodWithSubMethods = PhysicalAccessMethod(
-          label: 'Cell Phone',
-          methods: {
-            subMethod,
-          },
+        var methodWithSubMethods = AccessMethodStore().register(
+          PhysicalAccessMethod(
+            label: 'Cell Phone',
+            methods: {
+              subMethod,
+            },
+          ),
         );
 
         // Check the parent.
-        expect(methodWithSubMethods.label, equals('Cell Phone'));
-        expect(methodWithSubMethods.methods!.first, equals(subMethod));
+        expect(methodWithSubMethods.read.label, equals('Cell Phone'));
+        expect(methodWithSubMethods.read.methods!.first, equals(subMethod));
 
         // Check the child.
         // Check that both have correct added date.
-        expect(method.added, equals(executionInstant));
-        expect(methodWithSubMethods.methods!.first.added,
+        expect(methodRef.read.added, equals(executionInstant));
+        expect(methodWithSubMethods.read.methods!.first.read.added,
             equals(previousExecutionInstant));
       });
     });
@@ -63,84 +80,106 @@ void main() {
     test('access method nesting works correctly', () {
       // Define a hypothetical 'Google Account' structure.
 
-      AccessMethodConjunction conjunction;
-      KnowledgeAccessMethod password;
-      TemporalAccessMethod smsCode;
-      PhysicalAccessMethod cellPhone;
-      KnowledgeAccessMethod cellPhonePin;
+      AccessMethodRef<AccessMethodConjunction> conjunction;
+      AccessMethodRef<KnowledgeAccessMethod> password;
+      AccessMethodRef<TemporalAccessMethod> smsCode;
+      AccessMethodRef<PhysicalAccessMethod> cellPhone;
+      AccessMethodRef<KnowledgeAccessMethod> cellPhonePin;
 
       var googleAccountRequirements = AccessMethodTree({
-        conjunction = AccessMethodConjunction({
-          password = KnowledgeAccessMethod('mypassword', label: 'Password'),
-          smsCode = TemporalAccessMethod(
-              label: 'SMS Two-Factor Authentication Code',
-              methods: {
-                cellPhone = PhysicalAccessMethod(label: 'Cell Phone', methods: {
-                  cellPhonePin =
-                      KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
+        conjunction = AccessMethodStore().register(AccessMethodConjunction({
+          password = AccessMethodStore().register(
+            KnowledgeAccessMethod('mypassword', label: 'Password'),
+          ),
+          smsCode = AccessMethodStore().register(
+            TemporalAccessMethod(
+                label: 'SMS Two-Factor Authentication Code',
+                methods: {
+                  cellPhone = AccessMethodStore().register(
+                    PhysicalAccessMethod(label: 'Cell Phone', methods: {
+                      cellPhonePin = AccessMethodStore().register(
+                        KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
+                      ),
+                    }),
+                  ),
                 }),
-              }),
-        }),
+          ),
+        })),
       });
 
       // Now assert that the structure was created correctly.
       expect(googleAccountRequirements.first, equals(conjunction));
-      expect(conjunction.methods.first, equals(password));
-      expect(conjunction.methods.last, equals(smsCode));
+      expect(conjunction.read.methods.first, equals(password));
+      expect(conjunction.read.methods.last, equals(smsCode));
 
-      expect(smsCode.methods!.first, equals(cellPhone));
-      expect(cellPhone.methods!.first, equals(cellPhonePin));
+      expect(smsCode.read.methods!.first, equals(cellPhone));
+      expect(cellPhone.read.methods!.first, equals(cellPhonePin));
 
       // Now define a new access method, add it to the existing
       // structure, and ensure everything is still valid.
-      KnowledgeAccessMethod securityKeyPin;
-      PhysicalAccessMethod securityKey = PhysicalAccessMethod(
-        label: 'Security Key',
-        methods: {
-          securityKeyPin = KnowledgeAccessMethod(
-            '123456',
-            label: 'Security Key PIN',
-          ),
-        },
+      AccessMethodRef<KnowledgeAccessMethod> securityKeyPin;
+      AccessMethodRef<PhysicalAccessMethod> securityKey =
+          AccessMethodStore().register(
+        PhysicalAccessMethod(
+          label: 'Security Key',
+          methods: {
+            securityKeyPin = AccessMethodStore().register(
+              KnowledgeAccessMethod(
+                '123456',
+                label: 'Security Key PIN',
+              ),
+            ),
+          },
+        ),
       );
 
-      expect(securityKey.methods!.first, equals(securityKeyPin));
+      expect(securityKey.read.methods!.first, equals(securityKeyPin));
 
-      conjunction.methods.add(securityKey);
-      expect(conjunction.methods.last, equals(securityKey));
+      conjunction.editor
+          .update((final method) => method.methods.add(securityKey))
+          .commit();
+      expect(conjunction.read.methods.last, equals(securityKey));
 
       // Ensure the existing structure remains in place.
       expect(googleAccountRequirements.first, equals(conjunction));
-      expect(conjunction.methods.first, equals(password));
-      expect(conjunction.methods.elementAt(1), equals(smsCode));
+      expect(conjunction.read.methods.first, equals(password));
+      expect(conjunction.read.methods.elementAt(1), equals(smsCode));
 
-      expect(smsCode.methods!.first, equals(cellPhone));
-      expect(cellPhone.methods!.first, equals(cellPhonePin));
+      expect(smsCode.read.methods!.first, equals(cellPhone));
+      expect(cellPhone.read.methods!.first, equals(cellPhonePin));
     });
 
     test('priority (when adding, deleting and re-adding) works correctly', () {
-      AccessMethodConjunction conjunction;
-      KnowledgeAccessMethod password;
-      TemporalAccessMethod smsCode;
+      AccessMethodRef<AccessMethodConjunction> conjunction;
+      AccessMethodRef<KnowledgeAccessMethod> password;
+      AccessMethodRef<TemporalAccessMethod> smsCode;
 
       // Partial snippet of the above example.
       AccessMethodTree({
-        conjunction = AccessMethodConjunction({
-          password = KnowledgeAccessMethod('mypassword', label: 'Password'),
-          smsCode = TemporalAccessMethod(
-            label: 'SMS Two-Factor Authentication Code',
-          ),
-        }),
+        conjunction = AccessMethodStore().register(
+          AccessMethodConjunction({
+            password = AccessMethodStore().register(
+              KnowledgeAccessMethod('mypassword', label: 'Password'),
+            ),
+            smsCode = AccessMethodStore().register(
+              TemporalAccessMethod(
+                label: 'SMS Two-Factor Authentication Code',
+              ),
+            ),
+          }),
+        ),
       });
 
-      expect(conjunction.methods.first, equals(password));
-      expect(conjunction.methods.last, equals(smsCode));
+      expect(conjunction.read.methods.first, equals(password));
+      expect(conjunction.read.methods.last, equals(smsCode));
 
-      conjunction.methods.remove(password);
+      conjunction.editor
+          .update((final method) => method.methods.remove(password))
+          .commit();
 
-      expect(conjunction.methods.first, equals(smsCode));
+      expect(conjunction.read.methods.first, equals(smsCode));
       expect(smsCode.priority, equals(0));
-      expect(conjunction.methods.last, equals(smsCode));
+      expect(conjunction.read.methods.last, equals(smsCode));
       expect(smsCode.priority, equals(0));
 
       // Recall that priority is ascending (0 is highest priority, 1 is
@@ -151,71 +190,96 @@ void main() {
       final passwordWithLowestPriority = password.clone()..priority = -1;
 
       // Test that adding and removing works with highest priority.
-      conjunction.methods.add(passwordWithHighestPriority);
+      conjunction.editor
+          .update(
+              (final method) => method.methods.add(passwordWithHighestPriority))
+          .commit();
 
-      expect(conjunction.methods.first, equals(passwordWithHighestPriority));
-      expect(conjunction.methods.last, equals(smsCode));
+      expect(
+          conjunction.read.methods.first, equals(passwordWithHighestPriority));
+      expect(conjunction.read.methods.last, equals(smsCode));
 
-      expect(conjunction.methods.first, equals(passwordWithHighestPriority));
+      expect(
+          conjunction.read.methods.first, equals(passwordWithHighestPriority));
       expect(passwordWithHighestPriority.priority, equals(0));
-      expect(conjunction.methods.last, equals(smsCode));
+      expect(conjunction.read.methods.last, equals(smsCode));
       expect(smsCode.priority, equals(1));
 
-      conjunction.methods.remove(passwordWithHighestPriority);
+      conjunction.editor
+          .update((final method) =>
+              method.methods.remove(passwordWithHighestPriority))
+          .commit();
 
-      expect(conjunction.methods.first, equals(smsCode));
+      expect(conjunction.read.methods.first, equals(smsCode));
       expect(smsCode.priority, equals(0));
-      expect(conjunction.methods.last, equals(smsCode));
+      expect(conjunction.read.methods.last, equals(smsCode));
       expect(smsCode.priority, equals(0));
 
       // Test that adding and removing works with lowest priority.
-      conjunction.methods.add(passwordWithLowestPriority);
+      conjunction.editor
+          .update(
+              (final method) => method.methods.add(passwordWithLowestPriority))
+          .commit();
 
-      expect(conjunction.methods.first, equals(smsCode));
+      expect(conjunction.read.methods.first, equals(smsCode));
       expect(smsCode.priority, equals(0));
-      expect(conjunction.methods.last, equals(passwordWithLowestPriority));
+      expect(conjunction.read.methods.last, equals(passwordWithLowestPriority));
       expect(passwordWithLowestPriority.priority, equals(1));
     });
   });
 
   group("test exceptions", () {
     test('re-adding element already in tree should throw error', () {
-      AccessMethodConjunction conjunction;
-      KnowledgeAccessMethod password;
-      TemporalAccessMethod smsCode;
+      AccessMethodRef<AccessMethodConjunction> conjunction;
+      AccessMethodRef<KnowledgeAccessMethod> password;
+      AccessMethodRef<TemporalAccessMethod> smsCode;
 
       // Partial snippet of the above example.
       AccessMethodTree({
-        conjunction = AccessMethodConjunction({
-          password = KnowledgeAccessMethod('mypassword', label: 'Password'),
-          smsCode = TemporalAccessMethod(
-            label: 'SMS Two-Factor Authentication Code',
-          ),
-        }),
+        conjunction = AccessMethodStore().register(
+          AccessMethodConjunction({
+            password = AccessMethodStore().register(
+              KnowledgeAccessMethod('mypassword', label: 'Password'),
+            ),
+            smsCode = AccessMethodStore().register(
+              TemporalAccessMethod(
+                label: 'SMS Two-Factor Authentication Code',
+              ),
+            ),
+          }),
+        ),
       });
 
       // Re-adding password.
       expect(
-        () => conjunction.methods.add(password),
+        () => conjunction.editor
+            .update((final method) => method.methods.add(password))
+            .commit(),
         throwsA(isA<StateError>()),
       );
 
       // Re-adding smsCode.
       expect(
-        () => conjunction.methods.add(smsCode),
+        () => conjunction.editor
+            .update((final method) => method.methods.add(smsCode))
+            .commit(),
         throwsA(isA<StateError>()),
       );
 
       // Re-adding smsCode with different priority.
       expect(
-        () => conjunction.methods.add(smsCode..priority = 3),
+        () => conjunction.editor
+            .update((final method) => method.methods.add(smsCode..priority = 3))
+            .commit(),
         throwsA(isA<StateError>()),
       );
 
       // But, re-adding with a clone should work,
       // because the clone is a different object.
       expect(
-        () => conjunction.methods.add(smsCode.clone()),
+        () => conjunction.editor
+            .update((final method) => method.methods.add(smsCode.clone()))
+            .commit(),
         returnsNormally,
       );
     });
@@ -226,16 +290,27 @@ void main() {
 
     setUp(() {
       googleAccountRequirements = AccessMethodTree({
-        AccessMethodConjunction({
-          KnowledgeAccessMethod('mypassword', label: 'Password'),
-          TemporalAccessMethod(
-              label: 'SMS Two-Factor Authentication Code',
-              methods: {
-                PhysicalAccessMethod(label: 'Cell Phone', methods: {
-                  KnowledgeAccessMethod("1234", label: 'Cell Phone PIN'),
-                }),
-              }),
-        }),
+        AccessMethodStore().register(
+          AccessMethodConjunction({
+            AccessMethodStore().register(
+              KnowledgeAccessMethod('mypassword', label: 'Password'),
+            ),
+            AccessMethodStore().register(
+              TemporalAccessMethod(
+                  label: 'SMS Two-Factor Authentication Code',
+                  methods: {
+                    AccessMethodStore().register(
+                      PhysicalAccessMethod(label: 'Cell Phone', methods: {
+                        AccessMethodStore().register(
+                          KnowledgeAccessMethod("1234",
+                              label: 'Cell Phone PIN'),
+                        )
+                      }),
+                    ),
+                  }),
+            ),
+          }),
+        ),
       });
     });
 

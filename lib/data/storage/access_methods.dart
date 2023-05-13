@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:cyberguard/data/storage/abstract/storage.dart';
-import 'package:cyberguard/data/struct/access_method.dart';
+import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:cyberguard/domain/services/abstract/serialization.dart';
 import 'package:messagepack/messagepack.dart';
 

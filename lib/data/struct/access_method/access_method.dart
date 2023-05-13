@@ -5,10 +5,14 @@ import 'package:clock/clock.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:messagepack/messagepack.dart';
 import 'package:meta/meta.dart';
+import 'package:uuid/uuid.dart';
+
+part 'access_method_store.dart';
 
 /// A sorting function for specifying the relative order of [AccessMethod]s
 /// within a tree.
-typedef AccessMethodTreeSort = int Function(AccessMethod a, AccessMethod b);
+typedef AccessMethodTreeSort = int Function(
+    AccessMethodRef a, AccessMethodRef b);
 
 /// Uses the [SplayTreeSet] to implement a self-balancing binary tree of
 /// [AccessMethod]s. Also contains implementations of useful sorting methods
@@ -41,9 +45,10 @@ typedef AccessMethodTreeSort = int Function(AccessMethod a, AccessMethod b);
 /// relevant optimizations.
 ///
 /// This has not presently been fully explored in the interests of time.
-class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
+class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
+    with ChangeNotifier {
   /// Simply uses [AccessMethod.compareTo] to compare values.
-  static int defaultSort(final AccessMethod a, final AccessMethod b) =>
+  static int defaultSort(final AccessMethodRef a, final AccessMethodRef b) =>
       a.compareTo(b);
 
   /// The sorting method currently being used for this tree. Setting this
@@ -57,7 +62,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
   bool get isUsingDefaultSortingMethod =>
       currentSortingMethod == null || currentSortingMethod == defaultSort;
 
-  AccessMethodTree._(final Set<AccessMethod> methods,
+  AccessMethodTree._(final Set<AccessMethodRef> methods,
       {final AccessMethodTreeSort? sort})
       : currentSortingMethod = sort,
         super(sort) {
@@ -65,7 +70,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
   }
 
   /// Initializes the tree with an initial set of [AccessMethod]s.
-  AccessMethodTree(final Set<AccessMethod> methods) : this._(methods);
+  AccessMethodTree(final Set<AccessMethodRef> methods) : this._(methods);
 
   /// Initializes an empty access method tree.
   AccessMethodTree.empty() : this._({});
@@ -129,7 +134,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
 
   /// Used to augment the add event. Specifically, to inject the _owner
   /// property, and then return the result of the whole operation.
-  bool _proxyAdd(final AccessMethod element) {
+  bool _proxyAdd(final AccessMethodRef element) {
     if (element._owner != null) {
       throw DuplicateAccessMethodEntryStateError();
     }
@@ -149,14 +154,14 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
   }
 
   @override
-  void addAll(final Iterable<AccessMethod> elements) {
-    for (AccessMethod element in elements) {
+  void addAll(final Iterable<AccessMethodRef> elements) {
+    for (final element in elements) {
       add(element);
     }
   }
 
   @override
-  bool add(final AccessMethod element) {
+  bool add(final AccessMethodRef element) {
     // If the element's priority is negative, give it the highest score to make
     // it the lowest priority.
     if (element._priority < 0) {
@@ -175,7 +180,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
 
   /// Used to augment the remove event. Specifically, to inject the _owner
   /// property, and then return the result of the whole operation.
-  bool _proxyRemove(final AccessMethod element) {
+  bool _proxyRemove(final AccessMethodRef element) {
     if (super.remove(element)) {
       // Disassociate the element with the current tree.
       element._owner = null;
@@ -194,7 +199,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
   bool remove(final Object? object) {
     // If the object is not a valid possible entry in the set, just return
     // false.
-    if (object == null || object is! AccessMethod) return false;
+    if (object == null || object is! AccessMethodRef) return false;
 
     // If the element is not in the tree, simply return false.
     if (!contains(object)) return false;
@@ -210,10 +215,10 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
   }
 
   @override
-  void removeWhere(final bool Function(AccessMethod element) test) {
+  void removeWhere(final bool Function(AccessMethodRef element) test) {
     List<Object?> toRemove = [];
 
-    for (AccessMethod element in this) {
+    for (AccessMethodRef element in this) {
       if (test(element)) toRemove.add(element);
     }
 
@@ -226,8 +231,9 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
     if (isNotEmpty) {
       childStr = "\t";
 
-      for (AccessMethod method in this) {
-        childStr += "$method${method != last ? '\n' : ''}";
+      for (AccessMethodRef methodRef in this) {
+        final method = methodRef.read;
+        childStr += "$method${method != last.read ? '\n' : ''}";
       }
     }
 
@@ -253,10 +259,11 @@ class AccessMethodTree extends SplayTreeSet<AccessMethod> with ChangeNotifier {
 
     int length = messageUnpacker.unpackListLength();
 
-    Set<AccessMethod> methods = {};
+    Set<AccessMethodRef> methods = {};
     for (int i = 0; i < length; i++) {
-      final methodData = messageUnpacker.unpackBinary();
-      methods.add(AccessMethod.unpack(Uint8List.fromList(methodData)));
+      methods.add(AccessMethodRef.unpack(Uint8List.fromList(
+        messageUnpacker.unpackBinary(),
+      )));
     }
 
     // addAll assigns the owner of each entry, so we don't need to do that
@@ -292,40 +299,7 @@ typedef AccessMethodInstantiator<T extends AccessMethod> = T Function(
 
 /// Used to represent a means of accessing an [Account].
 @sealed
-abstract class AccessMethod implements Comparable<AccessMethod> {
-  /// The priority of the access method (relative to others on the same level
-  /// in an [AccessMethodTree]).
-  ///
-  /// 0 is the highest priority, with priority in descending order (e.g.,
-  /// 1 is next highest, 2 is after, etc., until the lowest priority item is
-  /// reached).
-  ///
-  /// If a higher priority method needs to be added, simply add one to the
-  /// priority of all other access methods to allow a new priority 0 to be
-  /// added.
-  ///
-  /// Negative integers aren't allowed for priority, but a placeholder of -1
-  /// is used to signal lowest priority. This will cause the [AccessMethodTree]
-  /// the [AccessMethod] is added to, to place this new access method at a
-  /// priority of priorityLowest + 1 (where priorityLowest is the priority
-  /// score of the current lowest priority access method).
-  ///
-  /// This priority only makes sense for an [AccessMethodTree] - and only one
-  /// tree at that. The same [AccessMethod] may not exist in multiple trees,
-  /// and should instead be cloned.
-  int get priority => _priority;
-
-  set priority(final int newPriority) {
-    _priority = newPriority;
-    _owner?._normalize();
-  }
-
-  int _priority;
-
-  /// The same [AccessMethod] may not exist in multiple trees, and should
-  /// instead be cloned. This is used to ensure that does not happen.
-  AccessMethodTree? _owner;
-
+abstract class AccessMethod {
   /// A key used to identify the user interface to use for this access method.
   UserInterfaceKey? userInterfaceKey;
 
@@ -359,16 +333,16 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
     required this.label,
     this.userInterfaceKey,
     this.prompt,
-    final int? priority,
-    final Set<AccessMethod>? methods,
-  })  : _priority = priority ?? -1,
-        added = clock.now().toUtc(),
-        methods = methods != null ? AccessMethodTree(methods) : null;
+    final Set<AccessMethodRef>? methods,
+  })  : added = clock.now().toUtc(),
+        methods = methods != null
+            ? (methods is AccessMethodTree
+                ? methods
+                : AccessMethodTree(methods))
+            : null;
 
   /// Used to implement subclasses that may include additional data.
   String _toString([final String? typeName, final String? additionalData]) {
-    // Add priority if this is part of a tree.
-    String priorityStr = _owner != null ? "priority = $priority, " : "";
     String childStr = "";
 
     if (hasAccessMethods) {
@@ -381,7 +355,7 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
     }
 
     String attributesStr =
-        "${priorityStr}label = $label${additionalData?.isNotEmpty ?? false ? ', $additionalData' : ''}";
+        "label = $label${additionalData?.isNotEmpty ?? false ? ', $additionalData' : ''}";
     attributesStr =
         "\n\t${attributesStr.replaceAll(RegExp(r",(\s*)"), ",\n\t")}\n";
 
@@ -391,17 +365,23 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
   @override
   String toString() => _toString();
 
-  @override
-  int compareTo(final AccessMethod other) {
-    return priority.compareTo(other.priority);
-  }
-
   /// Creates a new object with the same properties. However, if [keepPriority]
   /// is not explicitly set to true the priority value will be restored to
   /// lowest with the expectation that this is desired when adding this access
   /// method to a new tree.
   /// Nested methods (i.e., sub methods)
   AccessMethod clone({final bool keepPriority = false});
+
+  /// Full constructor for subclasses that may include additional data, to
+  /// allow for cloning.
+  AccessMethod._forClone({
+    required this.label,
+    this.userInterfaceKey,
+    this.prompt,
+    this.extra,
+    required this.added,
+    this.methods,
+  });
 
   String get factoryName;
 
@@ -423,7 +403,6 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
 
     // Then, write the base fields.
     messagePacker
-      ..packInt(_priority)
       ..packString(label)
       ..packString(userInterfaceKey?.name)
       ..packString(prompt)
@@ -442,8 +421,7 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
   AccessMethod.byUnpacking(
     final Unpacker messageUnpacker, {
     final AccessMethodTree? owner,
-  })  : _priority = messageUnpacker.unpackInt()!,
-        label = messageUnpacker.unpackString()!,
+  })  : label = messageUnpacker.unpackString()!,
         userInterfaceKey = messageUnpacker.unpackString() != null
             ? UserInterfaceKey.fromName(messageUnpacker.unpackString()!)
             : null,
@@ -453,10 +431,7 @@ abstract class AccessMethod implements Comparable<AccessMethod> {
             ? AccessMethodTree.unpack(
                 Uint8List.fromList(messageUnpacker.unpackBinary()),
               )
-            : null,
-        // Load the owner as specified (avoids cyclic dependency when
-        // [un]packing).
-        _owner = owner;
+            : null;
 
   /// Load and unpack the access method from binary data.
   static AccessMethod unpack(
@@ -486,7 +461,6 @@ class KnowledgeAccessMethod extends AccessMethod {
 
   KnowledgeAccessMethod(
     this.data, {
-    super.priority,
     required super.label,
     super.userInterfaceKey,
     super.prompt,
@@ -499,13 +473,34 @@ class KnowledgeAccessMethod extends AccessMethod {
   })  : data = messageUnpacker.unpackString()!,
         super.byUnpacking(messageUnpacker, owner: owner);
 
+  KnowledgeAccessMethod._forClone(
+    this.data, {
+    // Superclass parameters.
+    required final String label,
+    final UserInterfaceKey? userInterfaceKey,
+    final String? prompt,
+    final String? extra,
+    required final DateTime added,
+    final AccessMethodTree? methods,
+  }) : super._forClone(
+          label: label,
+          userInterfaceKey: userInterfaceKey,
+          prompt: prompt,
+          extra: extra,
+          added: added,
+          methods: methods,
+        );
+
   @override
   KnowledgeAccessMethod clone({final bool keepPriority = false}) {
-    return KnowledgeAccessMethod(
+    return KnowledgeAccessMethod._forClone(
       data,
-      priority: keepPriority ? _priority : null,
       label: label,
-      methods: methods?.clone(keepPriorities: true),
+      userInterfaceKey: userInterfaceKey,
+      prompt: prompt,
+      extra: extra,
+      added: added,
+      methods: methods,
     );
   }
 
@@ -529,7 +524,6 @@ class PhysicalAccessMethod extends AccessMethod {
   String get factoryName => typeName;
 
   PhysicalAccessMethod({
-    super.priority,
     required super.label,
     super.userInterfaceKey,
     super.prompt,
@@ -541,12 +535,32 @@ class PhysicalAccessMethod extends AccessMethod {
     final AccessMethodTree? owner,
   }) : super.byUnpacking(messageUnpacker, owner: owner);
 
+  PhysicalAccessMethod._forClone({
+    // Superclass parameters.
+    required final String label,
+    final UserInterfaceKey? userInterfaceKey,
+    final String? prompt,
+    final String? extra,
+    required final DateTime added,
+    final AccessMethodTree? methods,
+  }) : super._forClone(
+          label: label,
+          userInterfaceKey: userInterfaceKey,
+          prompt: prompt,
+          extra: extra,
+          added: added,
+          methods: methods,
+        );
+
   @override
   PhysicalAccessMethod clone({final bool keepPriority = false}) {
-    return PhysicalAccessMethod(
-      priority: keepPriority ? _priority : null,
+    return PhysicalAccessMethod._forClone(
       label: label,
-      methods: methods?.clone(keepPriorities: true),
+      userInterfaceKey: userInterfaceKey,
+      prompt: prompt,
+      extra: extra,
+      added: added,
+      methods: methods,
     );
   }
 
@@ -564,7 +578,6 @@ class BiometricAccessMethod extends AccessMethod {
   String get factoryName => typeName;
 
   BiometricAccessMethod({
-    super.priority,
     required super.label,
     super.userInterfaceKey,
     super.prompt,
@@ -576,12 +589,32 @@ class BiometricAccessMethod extends AccessMethod {
     final AccessMethodTree? owner,
   }) : super.byUnpacking(messageUnpacker, owner: owner);
 
+  BiometricAccessMethod._forClone({
+    // Superclass parameters.
+    required final String label,
+    final UserInterfaceKey? userInterfaceKey,
+    final String? prompt,
+    final String? extra,
+    required final DateTime added,
+    final AccessMethodTree? methods,
+  }) : super._forClone(
+          label: label,
+          userInterfaceKey: userInterfaceKey,
+          prompt: prompt,
+          extra: extra,
+          added: added,
+          methods: methods,
+        );
+
   @override
   BiometricAccessMethod clone({final bool keepPriority = false}) {
-    return BiometricAccessMethod(
-      priority: keepPriority ? _priority : null,
+    return BiometricAccessMethod._forClone(
       label: label,
-      methods: methods?.clone(keepPriorities: true),
+      userInterfaceKey: userInterfaceKey,
+      prompt: prompt,
+      extra: extra,
+      added: added,
+      methods: methods,
     );
   }
 
@@ -598,7 +631,6 @@ class TemporalAccessMethod extends AccessMethod {
   String get factoryName => typeName;
 
   TemporalAccessMethod({
-    super.priority,
     required super.label,
     super.userInterfaceKey,
     super.prompt,
@@ -610,12 +642,32 @@ class TemporalAccessMethod extends AccessMethod {
     final AccessMethodTree? owner,
   }) : super.byUnpacking(messageUnpacker, owner: owner);
 
+  TemporalAccessMethod._forClone({
+    // Superclass parameters.
+    required final String label,
+    final UserInterfaceKey? userInterfaceKey,
+    final String? prompt,
+    final String? extra,
+    required final DateTime added,
+    final AccessMethodTree? methods,
+  }) : super._forClone(
+          label: label,
+          userInterfaceKey: userInterfaceKey,
+          prompt: prompt,
+          extra: extra,
+          added: added,
+          methods: methods,
+        );
+
   @override
   TemporalAccessMethod clone({final bool keepPriority = false}) {
-    return TemporalAccessMethod(
-      priority: keepPriority ? _priority : null,
+    return TemporalAccessMethod._forClone(
       label: label,
-      methods: methods?.clone(keepPriorities: true),
+      userInterfaceKey: userInterfaceKey,
+      prompt: prompt,
+      extra: extra,
+      added: added,
+      methods: methods,
     );
   }
 
@@ -634,13 +686,12 @@ class AccessMethodConjunction extends AccessMethod {
   AccessMethodTree get methods => super.methods!;
 
   AccessMethodConjunction(
-    final Set<AccessMethod> methods, {
-    super.priority,
+    final Set<AccessMethodRef> methods, {
     super.userInterfaceKey,
     super.prompt,
   }) : super(
           methods: methods,
-          label: methods.map((final method) => method.label).join(" & "),
+          label: methods.map((final method) => method.read.label).join(" & "),
         );
 
   AccessMethodConjunction.byUnpacking(
@@ -648,11 +699,32 @@ class AccessMethodConjunction extends AccessMethod {
     final AccessMethodTree? owner,
   }) : super.byUnpacking(messageUnpacker, owner: owner);
 
+  AccessMethodConjunction._forClone({
+    // Superclass parameters.
+    required final String label,
+    final UserInterfaceKey? userInterfaceKey,
+    final String? prompt,
+    final String? extra,
+    required final DateTime added,
+    final AccessMethodTree? methods,
+  }) : super._forClone(
+          label: label,
+          userInterfaceKey: userInterfaceKey,
+          prompt: prompt,
+          extra: extra,
+          added: added,
+          methods: methods,
+        );
+
   @override
   AccessMethodConjunction clone({final bool keepPriority = false}) {
-    return AccessMethodConjunction(
-      methods.clone(keepPriorities: true),
-      priority: keepPriority ? _priority : null,
+    return AccessMethodConjunction._forClone(
+      label: label,
+      userInterfaceKey: userInterfaceKey,
+      prompt: prompt,
+      extra: extra,
+      added: added,
+      methods: methods,
     );
   }
 

@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:cyberguard/data/struct/access_method.dart';
+import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:messagepack/messagepack.dart';
 
@@ -60,11 +60,11 @@ class Account with ChangeNotifier {
         _serviceUrl = serviceUrl,
         _accountIdentifier = accountIdentifier,
         accessMethods = AccessMethodTree({
-          KnowledgeAccessMethod(
+          AccessMethodStore().register(KnowledgeAccessMethod(
             password,
             userInterfaceKey: UserInterfaceKey.password,
             label: 'Password',
-          ),
+          )),
         });
 
   /// Packs an account into binary data for storage.
