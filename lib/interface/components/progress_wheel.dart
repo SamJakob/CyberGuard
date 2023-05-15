@@ -1,28 +1,40 @@
 import 'dart:math';
 
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
 
-class ProgressWheel extends StatefulWidget {
+enum ProgressWheelAnimateFrom { previousValue, start }
+
+typedef ProgressWheelValueComputer = double Function();
+
+class ProgressWheel extends StatefulHookWidget {
   final List<Widget>? children;
   final double size;
-  final double value;
+  final double? value;
+  final ProgressWheelValueComputer? valueComputer;
   final Animation<double>? animation;
+  final ProgressWheelAnimateFrom animateFrom;
 
-  const ProgressWheel(
-      {final Key? key,
-      required this.size,
-      required this.value,
-      this.children,
-      this.animation})
-      : super(key: key);
+  const ProgressWheel({
+    final Key? key,
+    required this.size,
+    this.value,
+    this.valueComputer,
+    this.children,
+    this.animation,
+    this.animateFrom = ProgressWheelAnimateFrom.start,
+  })  : assert(value != null || valueComputer != null),
+        super(key: key);
 
   @override
   State<ProgressWheel> createState() => _ProgressWheelState();
 }
 
 class _ProgressWheelState extends State<ProgressWheel> {
+  double get value => widget.value ?? widget.valueComputer!();
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +42,10 @@ class _ProgressWheelState extends State<ProgressWheel> {
 
   @override
   Widget build(final BuildContext context) {
+    if (widget.animation != null) {
+      useListenable(widget.animation);
+    }
+
     return SizedBox(
       height: widget.size,
       width: widget.size,
@@ -42,11 +58,15 @@ class _ProgressWheelState extends State<ProgressWheel> {
               backgroundColor:
                   Theme.of(context).colorScheme.inversePrimary.withOpacity(0.4),
               color: context.colorScheme.onPrimaryContainer,
-              value: widget.animation != null
-                  ? Tween<double>(begin: 0, end: max(widget.value, 0.001))
-                      .animate(widget.animation!)
-                      .value
-                  : widget.value,
+              value: Tween(
+                      begin:
+                          widget.animateFrom == ProgressWheelAnimateFrom.start
+                              ? 0.0
+                              : usePrevious(value) ?? value,
+                      end: value)
+                  .evaluate(
+                widget.animation ?? const AlwaysStoppedAnimation(1),
+              ),
             ),
           ),
           if (widget.children != null)
@@ -111,5 +131,6 @@ class _ProgressWheelIndicator extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant final CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant final _ProgressWheelIndicator oldDelegate) =>
+      oldDelegate.value != value;
 }

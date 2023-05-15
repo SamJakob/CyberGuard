@@ -1,5 +1,5 @@
-import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/interface/utility/regex.dart';
+import 'package:cyberguard/interface/utility/validate.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -57,15 +57,6 @@ class AddAccountFormState extends ConsumerState<AddAccountForm> {
     return _formKey.currentState!.validate();
   }
 
-  String? checkForNameAndAccountIdentifierCombo() {
-    return ref.read(accountsProvider).hasNameAndAccountIdentifier(
-              name: _nameController.text,
-              accountIdentifier: _accountIdentifierController.text,
-            )
-        ? "An account with this name and account identifier combination already exists. Perhaps you meant to edit that account, or you've already added this account?"
-        : null;
-  }
-
   @override
   Widget build(final BuildContext context) {
     return Form(
@@ -83,16 +74,20 @@ class AddAccountFormState extends ConsumerState<AddAccountForm> {
                 return "Please enter a name for this account.";
               }
               String? error;
-              if ((error = checkForNameAndAccountIdentifierCombo()) != null) {
+              if ((error = ref.checkForNameAndAccountIdentifierCombo(
+                    accountName: _nameController.text,
+                    accountIdentifier: _accountIdentifierController.text,
+                  )) !=
+                  null) {
                 return error;
               }
               return null;
             },
             decoration: const InputDecoration(
               isDense: true,
-              labelText: "Service / Website *",
+              labelText: "Service *",
               helperText:
-                  "The name or URL of the service or website this account is for (e.g., \"Apple\", \"Google\").",
+                  "The name of the service or website this account is for (e.g., \"Apple\", \"Google\").",
               helperMaxLines: 2,
               errorMaxLines: 4,
               border: OutlineInputBorder(),
@@ -106,7 +101,11 @@ class AddAccountFormState extends ConsumerState<AddAccountForm> {
                 return "Please enter your identifier (such as a username, email, or ID) for this account. If you don't have one, or aren't sure, enter something that makes sense to you (such as your name).";
               }
               String? error;
-              if ((error = checkForNameAndAccountIdentifierCombo()) != null) {
+              if ((error = ref.checkForNameAndAccountIdentifierCombo(
+                    accountName: _nameController.text,
+                    accountIdentifier: _accountIdentifierController.text,
+                  )) !=
+                  null) {
                 return error;
               }
               return null;

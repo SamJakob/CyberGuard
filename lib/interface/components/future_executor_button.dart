@@ -41,6 +41,7 @@ class _FutureExecutorButtonState extends State<FutureExecutorButton> {
         ),
         onPressed: null,
         child: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             ApolloLoadingSpinner(
               color: Colors.white,

@@ -62,12 +62,15 @@ abstract class StorageService<DataType, SerializedDataType> {
 
   /// Checks whether there is currently data stored at rest. Returns true if
   /// there is, otherwise false.
+  /// To definitively check if there is any data, check if the storage service
+  /// has a backup of existing data (that may be recovered from).
   Future<bool> hasData();
 
   /// Fetches the stored data from at rest, performs any necessary steps to
   /// parse the data.
-  /// Otherwise, returns null if no data is stored.
-  Future<DataType?> load();
+  /// Otherwise, returns a new instance of [DataType] if there is no data
+  /// available.
+  Future<DataType> load();
 
   /// Stores the data to rest. Performs any necessary steps to serialize the data.
   Future<void> save(final DataType data);
@@ -172,23 +175,30 @@ abstract class EncryptedFileStorageService<DataType>
         "${(await _getPlatformStorageLocation()).path}$_serviceIdentifier.backup");
   }
 
+  /// Checks whether there is currently data stored at rest. Returns true if
+  /// there is, otherwise false.
+  /// To definitively check if there is any data in the event this returns
+  /// false, also check [hasBackup] to see if there is a backup of existing
+  /// data (that may be recovered from).
   @override
   Future<bool> hasData() async {
     final storageFile = await _getServiceStorageFile();
     return await storageFile.exists();
   }
 
+  /// Checks if there is a backup, for which data may be recovered from and
+  /// where data recovery may be attempted.
   Future<bool> hasBackup() async {
     final backupFile = await _getServiceStorageBackupFile();
     return await backupFile.exists();
   }
 
   /// Loads the encrypted data from disk, then performs decryption of the data.
-  /// This step will do nothing and return null (or the result of
-  /// [SerializationService.instantiate]) if there is no data to load
+  /// This step will immediately return the result of
+  /// [SerializationService.instantiate] if there is no data to load
   /// (i.e., if the file does not exist).
   @override
-  Future<DataType?> load() async {
+  Future<DataType> load() async {
     final storageFile = await _getServiceStorageFile();
 
     // If the data does not exist, check if there is a backup.
@@ -240,7 +250,7 @@ abstract class EncryptedFileStorageService<DataType>
     }
 
     // Encrypt the data.
-    final encryptedData = await _encrypt(data: serializedData!);
+    final encryptedData = await _encrypt(data: serializedData);
 
     // Write the encrypted data to disk.
     await storageFile.writeAsBytes(encryptedData);

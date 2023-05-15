@@ -1,4 +1,5 @@
 import 'package:cyberguard/domain/services/settings_info.dart';
+import 'package:cyberguard/domain/services/vibration.dart';
 import 'package:cyberguard/interface/utility/ui_scaling_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,9 @@ Future<void> setupLocatorEarly() async {
 
   // Register UI utility services.
   locator.registerSingleton(UiScalingService.register());
+
+  // Register haptic feedback service.
+  locator.registerSingleton(await VibrationService.initialize());
 }
 
 /// Register services and providers after the app starts, but whilst the app is

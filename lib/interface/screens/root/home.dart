@@ -2,7 +2,7 @@ import 'package:cyberguard/const/interface.dart';
 import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/interface/partials/level_score_wheel.dart';
 import 'package:cyberguard/interface/screens/root/home/home_app_bar.dart';
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
@@ -41,7 +41,7 @@ class HomeScreen extends ConsumerWidget {
                   Center(
                     child: LevelScoreWheel(
                       level: LevelScoreWheel.generateLevelInfo(
-                        numberOfAccounts: accounts.length,
+                        accounts: accounts,
                       ),
                       size: (1 - scrollPercentage) * 175,
                     ),

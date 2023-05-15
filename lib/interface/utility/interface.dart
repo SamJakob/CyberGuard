@@ -12,12 +12,12 @@ const List<Color> accentColors = [
 ];
 
 extension InterfaceUtilities on BuildContext {
-  Color getAccentColorFor(final Account account) =>
-      accentColors[identityHashCode(account.name) % accentColors.length];
+  Color getAccentColorFor(final String value) =>
+      accentColors[identityHashCode(value) % accentColors.length];
 
-  String getInitialsFor(final Account account) {
+  String getInitialsFor(final String value) {
     return RegExp(r'(^[A-Za-z]|(?<=\s)[A-Za-z])')
-        .allMatches(account.name)
+        .allMatches(value)
         .take(2)
         .map((final match) => match.group(1))
         .join('');
@@ -27,4 +27,10 @@ extension InterfaceUtilities on BuildContext {
       name.length >= length && name.length > 3
           ? "${name.substring(0, length - 3)}..."
           : name;
+}
+
+extension ThemeContextExtensions on BuildContext {
+  ColorScheme get colorScheme {
+    return Theme.of(this).colorScheme;
+  }
 }

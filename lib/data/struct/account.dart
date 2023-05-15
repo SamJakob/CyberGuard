@@ -25,10 +25,56 @@ class Account with ChangeNotifier {
 
   bool get hasServiceUrl => _serviceUrl != null && _serviceUrl!.isNotEmpty;
 
+  /// The URL of the service that the account belongs to.
   String? _serviceUrl;
   String? get serviceUrl => _serviceUrl;
   set serviceUrl(final String? serviceUrl) {
     _serviceUrl = serviceUrl;
+    notifyListeners();
+  }
+
+  bool get hasServiceChangePasswordUrl =>
+      _serviceChangePasswordUrl != null &&
+      _serviceChangePasswordUrl!.isNotEmpty;
+
+  /// The change-password URL of the service that the account belongs to.
+  String? _serviceChangePasswordUrl;
+  String? get serviceChangePasswordUrl => _serviceChangePasswordUrl;
+  set serviceChangePasswordUrl(final String? serviceChangePasswordUrl) {
+    _serviceChangePasswordUrl = serviceChangePasswordUrl;
+    notifyListeners();
+  }
+
+  bool get hasIconUrl => _iconUrl != null && _iconUrl!.isNotEmpty;
+
+  /// The URL of the icon of the service that the account belongs to.
+  String? _iconUrl;
+  String? get iconUrl => _iconUrl;
+  set iconUrl(final String? icon) {
+    _iconUrl = icon;
+    notifyListeners();
+  }
+
+  /// Whether the device provides access to the account.
+  bool _deviceProvidesAccess;
+  bool get deviceProvidesAccess => _deviceProvidesAccess;
+  set deviceProvidesAccess(final bool deviceProvidesAccess) {
+    _deviceProvidesAccess = deviceProvidesAccess;
+    notifyListeners();
+  }
+
+  /// Whether the account is shared with other people.
+  bool _accountIsShared;
+  bool get accountIsShared => _accountIsShared;
+  set accountIsShared(final bool accountIsShared) {
+    _accountIsShared = accountIsShared;
+    notifyListeners();
+  }
+
+  int _accountPriority;
+  int get accountPriority => _accountPriority;
+  set accountPriority(final int accountPriority) {
+    _accountPriority = accountPriority;
     notifyListeners();
   }
 
@@ -41,10 +87,20 @@ class Account with ChangeNotifier {
     required final String accountIdentifier,
     final AccessMethodTree? accessMethodTree,
     final String? serviceUrl,
+    final String? serviceChangePasswordUrl,
+    final String? iconUrl,
+    final bool? deviceProvidesAccess,
+    final bool? accountIsShared,
+    final int? accountPriority,
   })  : _name = name,
         _accountIdentifier = accountIdentifier,
         accessMethods = accessMethodTree ?? AccessMethodTree.empty(),
-        _serviceUrl = serviceUrl {
+        _serviceUrl = serviceUrl,
+        _serviceChangePasswordUrl = serviceChangePasswordUrl,
+        _iconUrl = iconUrl,
+        _deviceProvidesAccess = deviceProvidesAccess ?? false,
+        _accountIsShared = accountIsShared ?? false,
+        _accountPriority = accountPriority ?? 1 {
     // Proxy change notifications from the access method tree to the
     // account.
     accessMethods.addListener(notifyListeners);
@@ -56,16 +112,17 @@ class Account with ChangeNotifier {
     final String password, {
     required final String name,
     final String? serviceUrl,
-  })  : _name = name,
-        _serviceUrl = serviceUrl,
-        _accountIdentifier = accountIdentifier,
-        accessMethods = AccessMethodTree({
-          AccessMethodStore().register(KnowledgeAccessMethod(
-            password,
-            userInterfaceKey: UserInterfaceKey.password,
-            label: 'Password',
-          )),
-        });
+  }) : this(
+          name: name,
+          serviceUrl: serviceUrl,
+          accountIdentifier: accountIdentifier,
+          accessMethodTree: AccessMethodTree({
+            AccessMethodStore().register(KnowledgeAccessMethod(
+              password,
+              userInterfaceKey: AccessMethodInterfaceKey.password,
+            )),
+          }),
+        );
 
   /// Packs an account into binary data for storage.
   Uint8List pack() {
@@ -73,7 +130,12 @@ class Account with ChangeNotifier {
     messagePacker
       ..packString(_name)
       ..packString(_accountIdentifier)
-      ..packString(serviceUrl)
+      ..packString(_serviceUrl)
+      ..packString(_serviceChangePasswordUrl)
+      ..packString(_iconUrl)
+      ..packBool(_deviceProvidesAccess)
+      ..packBool(_accountIsShared)
+      ..packInt(_accountPriority)
       ..packBinary(accessMethods.pack());
     return messagePacker.takeBytes();
   }
@@ -85,6 +147,11 @@ class Account with ChangeNotifier {
     String name = messageUnpacker.unpackString()!;
     String accountIdentifier = messageUnpacker.unpackString()!;
     String? serviceUrl = messageUnpacker.unpackString();
+    String? serviceChangePasswordUrl = messageUnpacker.unpackString();
+    String? iconUrl = messageUnpacker.unpackString();
+    bool? deviceProvidesAccess = messageUnpacker.unpackBool();
+    bool? accountIsShared = messageUnpacker.unpackBool();
+    int? accountPriority = messageUnpacker.unpackInt() ?? 1;
     AccessMethodTree accessMethods = AccessMethodTree.unpack(
       Uint8List.fromList(messageUnpacker.unpackBinary()),
     )!;
@@ -94,6 +161,11 @@ class Account with ChangeNotifier {
       accountIdentifier: accountIdentifier,
       accessMethodTree: accessMethods,
       serviceUrl: serviceUrl,
+      serviceChangePasswordUrl: serviceChangePasswordUrl,
+      iconUrl: iconUrl,
+      deviceProvidesAccess: deviceProvidesAccess,
+      accountIsShared: accountIsShared,
+      accountPriority: accountPriority,
     );
   }
 }

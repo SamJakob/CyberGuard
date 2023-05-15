@@ -1,11 +1,13 @@
 import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:cyberguard/data/struct/account.dart';
 import 'package:cyberguard/interface/components/progress_wheel.dart';
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 
-class LevelScoreWheel extends StatefulWidget {
+class LevelScoreWheel extends HookWidget {
   final LevelInfo level;
 
   final double size;
@@ -15,12 +17,16 @@ class LevelScoreWheel extends StatefulWidget {
     required this.level,
   }) : super(key: key);
 
-  @override
-  State<LevelScoreWheel> createState() => _LevelScoreWheelState();
-
-  static LevelInfo generateLevelInfo({required final int numberOfAccounts}) {
-    // Compute the raw XP value of the user.
-    final rawXp = numberOfAccounts * 25;
+  static LevelInfo generateLevelInfo(
+      {required final Map<String, Account> accounts}) {
+    // Compute the raw XP value of the user. For now this is just calculated
+    // based on the amount of information provided to the app.
+    final perAccountScores = accounts.values
+        .map((final entry) =>
+            entry.accessMethods.isNotEmpty ? entry.accessMethods.length * 5 : 0)
+        .fold(
+            0, (final previousValue, final element) => previousValue + element);
+    final rawXp = (accounts.length * 20) + perAccountScores;
 
     // Clone the raw XP value so we can use it to compute the user's level.
     int xp = rawXp;
@@ -51,55 +57,32 @@ class LevelScoreWheel extends StatefulWidget {
     // Otherwise return 'Max Level'.
     return const LevelInfo.max();
   }
-}
-
-class _LevelScoreWheelState extends State<LevelScoreWheel>
-    with SingleTickerProviderStateMixin {
-  AnimationController? animationController;
-
-  @override
-  void initState() {
-    super.initState();
-
-    animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    )
-      ..forward(from: 0)
-      ..addListener(() {
-        if (mounted) setState(() {});
-      });
-  }
-
-  @override
-  void dispose() {
-    animationController?.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(final BuildContext context) {
-    final isMaxLevel = widget.level == const LevelInfo.max();
+    final isMaxLevel = level == const LevelInfo.max();
+
+    final animationController = useAnimationController(
+      duration: const Duration(milliseconds: 600),
+    )..forward(from: 0);
 
     return ProgressWheel(
-      animation: animationController != null
-          ? CurvedAnimation(
-              parent: animationController!,
-              curve: Curves.easeInOutCubic,
-            )
-          : null,
-      size: widget.size,
-      value: widget.level.xp / widget.level.xpPerLevel,
+      animation: CurvedAnimation(
+        parent: animationController,
+        curve: Curves.easeInOutCubic,
+      ),
+      size: size,
+      value: level.xp / level.xpPerLevel,
       children: [
         SizedBox(
           width: double.infinity,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: AutoSizeText(
-              !isMaxLevel ? "${widget.level.xp} XP" : "🤠",
-              minFontSize: (widget.size * 0.15).roundToDouble(),
+              !isMaxLevel ? "${level.xp} XP" : "🤠",
+              minFontSize: (size * 0.15).roundToDouble(),
               style: TextStyle(
-                fontSize: (widget.size * 0.2).roundToDouble(),
+                fontSize: (size * 0.2).roundToDouble(),
                 fontWeight: FontWeight.w900,
                 color: context.colorScheme.onPrimaryContainer,
               ),
@@ -113,8 +96,8 @@ class _LevelScoreWheelState extends State<LevelScoreWheel>
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: AutoSizeText(
-              !isMaxLevel ? "Level ${widget.level.level}" : "Max Level",
-              minFontSize: (widget.size * 0.085).roundToDouble(),
+              !isMaxLevel ? "Level ${level.level}" : "Max Level",
+              minFontSize: (size * 0.085).roundToDouble(),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: context.colorScheme.onPrimaryContainer,

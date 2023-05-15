@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIFileSharingEnabled</key>
-	<false/>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Securely encrypt your data on your device.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -30,8 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Your camera is used to scan QR codes for applications supporting two-factor authentication (TOTP).</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Securely encrypt your data on your device.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>You can enable this to import QR codes from your Photo Library for applications supporting two-factor authentication (TOTP).</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIFileSharingEnabled</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

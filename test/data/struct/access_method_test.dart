@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
@@ -225,6 +227,70 @@ void main() {
       expect(smsCode.priority, equals(0));
       expect(conjunction.read.methods.last, equals(passwordWithLowestPriority));
       expect(passwordWithLowestPriority.priority, equals(1));
+    });
+
+    test('recursiveWhere works on nested structure', () {
+      AccessMethodRef<AccessMethodConjunction> conjunction;
+      AccessMethodRef<KnowledgeAccessMethod> password;
+      AccessMethodRef<TemporalAccessMethod> smsCode;
+
+      // Partial snippet of the above example.
+      final AccessMethodTree tree = AccessMethodTree({
+        conjunction = AccessMethodStore().register(
+          AccessMethodConjunction({
+            password = AccessMethodStore().register(
+              KnowledgeAccessMethod('mypassword', label: 'Password'),
+            ),
+            smsCode = AccessMethodStore().register(
+              TemporalAccessMethod(
+                label: 'SMS Two-Factor Authentication Code',
+              ),
+            ),
+          }),
+        ),
+      });
+
+      // Test that recursiveWhere works on nested structure by checking if it
+      // contains a TemporalAccessMethod.
+      expect(
+        tree
+            .recursiveWhere(
+              (final methodRef) => methodRef.read is TemporalAccessMethod,
+            )
+            .isNotEmpty,
+        equals(true),
+      );
+
+      // ...and that it doesn't contain a PhysicalAccessMethod.
+      expect(
+        tree
+            .recursiveWhere(
+              (final methodRef) => methodRef.read is PhysicalAccessMethod,
+            )
+            .isEmpty,
+        equals(true),
+      );
+
+      // ...and finally, to check that the AccessMethodRef itself is totally
+      // valid, check the priority and label of the first
+      // KnowledgeAccessMethod.
+      expect(
+        tree
+            .recursiveWhere(
+                (final methodRef) => methodRef.read is KnowledgeAccessMethod)
+            .first
+            .priority,
+        equals(password.priority),
+      );
+      expect(
+        tree
+            .recursiveWhere(
+                (final methodRef) => methodRef.read is KnowledgeAccessMethod)
+            .first
+            .read
+            .label,
+        equals(password.read.label),
+      );
     });
   });
 

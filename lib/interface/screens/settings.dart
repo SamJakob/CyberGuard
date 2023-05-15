@@ -3,6 +3,7 @@ import 'package:cyberguard/data/struct/platform_message.dart';
 import 'package:cyberguard/domain/providers/settings.dart';
 import 'package:cyberguard/domain/services/settings_info.dart';
 import 'package:cyberguard/interface/components/typography.dart';
+import 'package:cyberguard/interface/utility/url_launcher.dart';
 import 'package:cyberguard/locator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +32,42 @@ class SettingsScreen extends ConsumerWidget {
         child: Scrollbar(
           child: Column(
             children: [
+              const SizedBox(height: 20),
+              SwitchListTile(
+                title: const Text(
+                  "Scan Account Setup",
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  settings.enableAnalysis
+                      ? "$kAppName will automatically scan your account setup "
+                          "to try and identify potential issues. All scanning "
+                          "is performed locally on your device and your data "
+                          "is NEVER sent from your device."
+                      : "$kAppName will not perform any scans on your account "
+                          "setup.",
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                ),
+                onChanged: (final bool value) {
+                  ref.read(settingsProvider.notifier).setEnableAnalysis(value);
+                },
+                value: settings.enableAnalysis,
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20)
+                      .copyWith(top: 10),
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    child: const Text("Manually Start Scan"),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               const ListTile(
                 title: TitleText("Privacy Settings"),
               ),
@@ -82,7 +119,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       const TextSpan(
                         text:
-                            " adapts its capabilities to the platform it is running on. "
+                            " adapts its security capabilities to the platform it is running on. "
                             "Your detected platform is ",
                       ),
                       TextSpan(
@@ -215,8 +252,7 @@ class SettingsScreen extends ConsumerWidget {
                         style: TextStyle(color: Theme.of(context).primaryColor),
                       ),
                       onTap: () async {
-                        await launchUrl(Uri.parse(kAppSourceUrl!))
-                            .catchError((final _) => false);
+                        await context.launch(kAppSourceUrl!);
                       },
                       onLongPress: () async {
                         await Clipboard.setData(
@@ -261,6 +297,7 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

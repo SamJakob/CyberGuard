@@ -5,44 +5,66 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// A class that represents the user-defined settings of the app.
 @immutable
-class CGASettings {
-  /// Initializes a [CGASettings] object with the given settings.
-  const CGASettings({
+class CGSettings {
+  /// Initializes a [CGSettings] object with the given settings.
+  const CGSettings({
+    final bool? enableAnalysis,
     final bool? enableServiceLookups,
-  }) : enableServiceLookups = enableServiceLookups ?? true;
+  })  : enableAnalysis = enableAnalysis ?? true,
+        enableServiceLookups = enableServiceLookups ?? true;
 
-  /// Initializes a [CGASettings] object with default settings for the app.
-  const CGASettings.defaultSettings() : this();
+  /// Initializes a [CGSettings] object with default settings for the app.
+  const CGSettings.defaultSettings() : this();
+
+  /// Enables the use of heuristic analysis to try to identify issues with a
+  /// user's online account setup.
+  final bool enableAnalysis;
 
   /// Enables the use of network requests to try to identify a service by its
   /// URL with .well-known service discovery.
   final bool enableServiceLookups;
 
-  /// Returns a copy of this [CGASettings] object with the given parameters
+  /// Returns a copy of this [CGSettings] object with the given parameters
   /// replaced.
-  CGASettings copyWith({
+  CGSettings copyWith({
+    final bool? enableAnalysis,
     final bool? enableServiceLookups,
   }) =>
-      CGASettings(
+      CGSettings(
+        enableAnalysis: enableAnalysis ?? this.enableAnalysis,
         enableServiceLookups: enableServiceLookups ?? this.enableServiceLookups,
       );
 }
 
-/// A provider that provides the [CGASettings] object for the app, allowing
+/// A provider that provides the [CGSettings] object for the app, allowing
 /// the rest of the app to access and alter the user-defined settings,
 /// throughout the app.
-class SettingsProvider extends StateNotifier<CGASettings> {
+class SettingsProvider extends StateNotifier<CGSettings> {
   SettingsProvider()
-      : super(CGASettings(
+      : super(CGSettings(
+          enableAnalysis:
+              locator.get<SharedPreferences>().getBool('enableAnalysis'),
           enableServiceLookups:
               locator.get<SharedPreferences>().getBool('enableServiceLookups'),
         ));
 
   /// Initializes a [SettingsProvider] with the given [settings], which can
-  /// either be null (to use the defaults) or a [CGASettings] object which
+  /// either be null (to use the defaults) or a [CGSettings] object which
   /// could be manually loaded from the platform preferences.
-  SettingsProvider.fromSettings(final CGASettings? settings)
-      : super(settings ?? const CGASettings.defaultSettings());
+  SettingsProvider.fromSettings(final CGSettings? settings)
+      : super(settings ?? const CGSettings.defaultSettings());
+
+  /// Enables or disables the use of heuristic analysis to try to identify
+  /// issues with a user's online account setup.
+  void setEnableAnalysis(final bool enableAnalysis) {
+    locator.get<SharedPreferences>().setBool('enableAnalysis', enableAnalysis);
+    state = state.copyWith(enableAnalysis: enableAnalysis);
+  }
+
+  /// Toggles the [enableAnalysis] setting.
+  void toggleEnableAnalysis() {
+    setEnableAnalysis(!state.enableAnalysis);
+  }
 
   /// Enables or disables the use of network requests to try to identify a
   /// service by its URL with .well-known service discovery.
@@ -59,6 +81,6 @@ class SettingsProvider extends StateNotifier<CGASettings> {
   }
 }
 
-final settingsProvider = StateNotifierProvider<SettingsProvider, CGASettings>(
+final settingsProvider = StateNotifierProvider<SettingsProvider, CGSettings>(
   (final ref) => throw TypeError(),
 );

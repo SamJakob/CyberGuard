@@ -2,7 +2,10 @@ import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
+import 'package:cyberguard/data/struct/account.dart';
+import 'package:cyberguard/domain/providers/account.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:messagepack/messagepack.dart';
 import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
@@ -12,7 +15,9 @@ part 'access_method_store.dart';
 /// A sorting function for specifying the relative order of [AccessMethod]s
 /// within a tree.
 typedef AccessMethodTreeSort = int Function(
-    AccessMethodRef a, AccessMethodRef b);
+  AccessMethodRef a,
+  AccessMethodRef b,
+);
 
 /// Uses the [SplayTreeSet] to implement a self-balancing binary tree of
 /// [AccessMethod]s. Also contains implementations of useful sorting methods
@@ -45,8 +50,16 @@ typedef AccessMethodTreeSort = int Function(
 /// relevant optimizations.
 ///
 /// This has not presently been fully explored in the interests of time.
-class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
-    with ChangeNotifier {
+///
+/// UPDATE: With the update to Dart 3.0 which prevents final classes from being
+/// extended outside of the library in which they are defined, this class no
+/// longer directly extends [SplayTreeSet]. Instead, it uses a [SplayTreeSet]
+/// as an internal data structure, and exposes the relevant methods.
+///
+/// As such, it might be possible to implement the above optimizations by
+/// converting this to an immutable data structure and exposing a view class
+/// which supports sorting.
+class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
   /// Simply uses [AccessMethod.compareTo] to compare values.
   static int defaultSort(final AccessMethodRef a, final AccessMethodRef b) =>
       a.compareTo(b);
@@ -65,7 +78,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
   AccessMethodTree._(final Set<AccessMethodRef> methods,
       {final AccessMethodTreeSort? sort})
       : currentSortingMethod = sort,
-        super(sort) {
+        __underlingSet = SplayTreeSet(sort) {
     addAll(methods);
   }
 
@@ -139,7 +152,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
       throw DuplicateAccessMethodEntryStateError();
     }
 
-    if (super.add(element)) {
+    if (__underlingSet.add(element)) {
       // Associate the element with the current tree.
       element._owner = this;
 
@@ -153,14 +166,12 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
     }
   }
 
-  @override
   void addAll(final Iterable<AccessMethodRef> elements) {
     for (final element in elements) {
       add(element);
     }
   }
 
-  @override
   bool add(final AccessMethodRef element) {
     // If the element's priority is negative, give it the highest score to make
     // it the lowest priority.
@@ -181,7 +192,7 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
   /// Used to augment the remove event. Specifically, to inject the _owner
   /// property, and then return the result of the whole operation.
   bool _proxyRemove(final AccessMethodRef element) {
-    if (super.remove(element)) {
+    if (__underlingSet.remove(element)) {
       // Disassociate the element with the current tree.
       element._owner = null;
 
@@ -195,7 +206,6 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
     }
   }
 
-  @override
   bool remove(final Object? object) {
     // If the object is not a valid possible entry in the set, just return
     // false.
@@ -207,14 +217,12 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
     return _proxyRemove(object);
   }
 
-  @override
   void removeAll(final Iterable<Object?> elements) {
     for (Object? element in elements) {
       remove(element);
     }
   }
 
-  @override
   void removeWhere(final bool Function(AccessMethodRef element) test) {
     List<Object?> toRemove = [];
 
@@ -223,6 +231,30 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
     }
 
     removeAll(toRemove);
+  }
+
+  List<AccessMethodRef> recursiveWhere(
+      final bool Function(AccessMethodRef methodRef) test) {
+    Set<AccessMethodRef> results = {};
+
+    for (AccessMethodRef element in this) {
+      if (test(element)) results.add(element);
+
+      if (element.read.methods != null && element.read.methods!.isNotEmpty) {
+        results.addAll(
+            (element.read.methods as AccessMethodTree).recursiveWhere(test));
+      }
+    }
+
+    return results.toList();
+  }
+
+  /// Returns true if any element in the tree matches the specified [test].
+  /// This is a recursive search, and will search all children of the tree.
+  /// If you want to search only the top level, use the built-in method
+  /// [contains].
+  bool hasMethodWhere(final bool Function(AccessMethodRef methodRef) test) {
+    return recursiveWhere(test).isNotEmpty;
   }
 
   @override
@@ -271,24 +303,52 @@ class AccessMethodTree extends SplayTreeSet<AccessMethodRef>
     tree.addAll(methods);
     return tree;
   }
+
+  // -- PRIVATE. DO NOT MODIFY OR REMOVE. --------------------------------------
+
+  /// This should only be used by [_proxyAdd] and [_proxyRemove]. Failure to
+  /// adhere to this can cause synchronization problems.
+  SplayTreeSet<AccessMethodRef> __underlingSet;
+
+  @override
+  Iterator<AccessMethodRef<AccessMethod>> get iterator =>
+      __underlingSet.iterator;
+
+  /// Convenience method to 'promote' an iterable into an [AccessMethodTree].
+  /// This is a shim to allow the use of [AccessMethodTree] in places where
+  /// [Iterable] is expected, which was the case in the original design (as
+  /// [AccessMethodTree] was a subclass of [SplayTreeSet]).
+  static AccessMethodTree? promote(final Iterable<AccessMethodRef>? methods) {
+    return methods != null ? AccessMethodTree(methods.toSet()) : null;
+  }
 }
 
-enum UserInterfaceKey {
+enum AccessMethodInterfaceKey {
+  /// Another account.
+  otherAccount("Other Account"),
+
   /// The user interface key for a password access method.
-  password,
+  password("Password, Passphrase or PIN"),
 
   /// The user interface key for a TOTP access method.
-  totp,
+  totp("TOTP"),
+
+  /// The user interface key for an SMS-based access method.
+  sms("SMS"),
 
   /// The user interface key for a biometric access method.
-  biometric,
+  biometric("Biometric"),
 
   /// The user interface key for a security question and answer pair
   /// access method.
-  securityQuestion;
+  securityQuestion("Security Question");
 
-  static UserInterfaceKey fromName(final String name) {
-    return UserInterfaceKey.values
+  final String label;
+
+  const AccessMethodInterfaceKey(this.label);
+
+  static AccessMethodInterfaceKey fromName(final String name) {
+    return AccessMethodInterfaceKey.values
         .singleWhere((final element) => name == element.name);
   }
 }
@@ -301,15 +361,10 @@ typedef AccessMethodInstantiator<T extends AccessMethod> = T Function(
 @sealed
 abstract class AccessMethod {
   /// A key used to identify the user interface to use for this access method.
-  UserInterfaceKey? userInterfaceKey;
+  AccessMethodInterfaceKey? userInterfaceKey;
 
   /// The user-defined label of the access method.
-  String label;
-
-  /// A prompt, such as a security question, or other associated data (in clear
-  /// text) that is used to identify the data associated with this access
-  /// method (such as the answer to the security question).
-  String? prompt;
+  String? label;
 
   /// Any extra data associated with this access method. This is intended to
   /// be used for the [userInterfaceKey] to provide additional data to the
@@ -332,14 +387,9 @@ abstract class AccessMethod {
   AccessMethod({
     required this.label,
     this.userInterfaceKey,
-    this.prompt,
     final Set<AccessMethodRef>? methods,
   })  : added = clock.now().toUtc(),
-        methods = methods != null
-            ? (methods is AccessMethodTree
-                ? methods
-                : AccessMethodTree(methods))
-            : null;
+        methods = AccessMethodTree.promote(methods);
 
   /// Used to implement subclasses that may include additional data.
   String _toString([final String? typeName, final String? additionalData]) {
@@ -377,7 +427,6 @@ abstract class AccessMethod {
   AccessMethod._forClone({
     required this.label,
     this.userInterfaceKey,
-    this.prompt,
     this.extra,
     required this.added,
     this.methods,
@@ -404,8 +453,8 @@ abstract class AccessMethod {
     // Then, write the base fields.
     messagePacker
       ..packString(label)
+      ..packBool(userInterfaceKey != null)
       ..packString(userInterfaceKey?.name)
-      ..packString(prompt)
       ..packString(added.toIso8601String())
       ..packBool(hasAccessMethods);
 
@@ -421,11 +470,10 @@ abstract class AccessMethod {
   AccessMethod.byUnpacking(
     final Unpacker messageUnpacker, {
     final AccessMethodTree? owner,
-  })  : label = messageUnpacker.unpackString()!,
-        userInterfaceKey = messageUnpacker.unpackString() != null
-            ? UserInterfaceKey.fromName(messageUnpacker.unpackString()!)
+  })  : label = messageUnpacker.unpackString(),
+        userInterfaceKey = messageUnpacker.unpackBool()!
+            ? AccessMethodInterfaceKey.fromName(messageUnpacker.unpackString()!)
             : null,
-        prompt = messageUnpacker.unpackString(),
         added = DateTime.parse(messageUnpacker.unpackString()!),
         methods = messageUnpacker.unpackBool()!
             ? AccessMethodTree.unpack(
@@ -448,6 +496,81 @@ abstract class AccessMethod {
   }
 }
 
+/// An access method implementation that indicates usage of another existing
+/// account as an access method.
+/// For example: "Sign in with Google", "Sign in with Apple", etc.
+class ExistingAccountAccessMethod extends AccessMethod {
+  /// The ID of the account that is being used as an access method.
+  final String accountId;
+
+  /// The [Account] that is being used as an access method. May be null if the
+  /// account is not available.
+  Account? getAccount(final WidgetRef ref) {
+    return ref.read(accountsProvider).get(accountId);
+  }
+
+  static const String typeName = "ExistingAccountAccessMethod";
+
+  @override
+  String get factoryName => typeName;
+
+  @override
+  AccessMethodInterfaceKey get userInterfaceKey =>
+      AccessMethodInterfaceKey.otherAccount;
+
+  ExistingAccountAccessMethod(
+    this.accountId, {
+    super.label,
+    super.methods,
+    super.userInterfaceKey,
+  });
+
+  ExistingAccountAccessMethod.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  })  : accountId = messageUnpacker.unpackString()!,
+        super.byUnpacking(messageUnpacker, owner: owner);
+
+  ExistingAccountAccessMethod._forClone(
+    this.accountId, {
+    // Superclass parameters.
+    final String? label,
+    final AccessMethodInterfaceKey? userInterfaceKey,
+    final String? extra,
+    required final DateTime added,
+    final AccessMethodTree? methods,
+  }) : super._forClone(
+          label: label,
+          userInterfaceKey: userInterfaceKey,
+          extra: extra,
+          added: added,
+          methods: methods,
+        );
+
+  @override
+  ExistingAccountAccessMethod clone({final bool keepPriority = false}) {
+    return ExistingAccountAccessMethod._forClone(
+      accountId,
+      label: label,
+      userInterfaceKey: userInterfaceKey,
+      extra: extra,
+      added: added,
+      methods: methods,
+    );
+  }
+
+  @override
+  String toString() =>
+      _toString('ExistingAccountAccessMethod', 'accountId = $accountId');
+
+  @override
+  Uint8List pack({final AccessMethodAdditionalFieldsPacker? additionalFields}) {
+    return super.pack(additionalFields: (final Packer messagePacker) {
+      messagePacker.packString(accountId);
+    });
+  }
+}
+
 /// An access method implementation that represents 'something you know'.
 /// Includes: password, PIN, etc.,
 class KnowledgeAccessMethod extends AccessMethod {
@@ -461,9 +584,8 @@ class KnowledgeAccessMethod extends AccessMethod {
 
   KnowledgeAccessMethod(
     this.data, {
-    required super.label,
+    super.label,
     super.userInterfaceKey,
-    super.prompt,
     super.methods,
   });
 
@@ -476,16 +598,14 @@ class KnowledgeAccessMethod extends AccessMethod {
   KnowledgeAccessMethod._forClone(
     this.data, {
     // Superclass parameters.
-    required final String label,
-    final UserInterfaceKey? userInterfaceKey,
-    final String? prompt,
+    final String? label,
+    final AccessMethodInterfaceKey? userInterfaceKey,
     final String? extra,
     required final DateTime added,
     final AccessMethodTree? methods,
   }) : super._forClone(
           label: label,
           userInterfaceKey: userInterfaceKey,
-          prompt: prompt,
           extra: extra,
           added: added,
           methods: methods,
@@ -497,7 +617,6 @@ class KnowledgeAccessMethod extends AccessMethod {
       data,
       label: label,
       userInterfaceKey: userInterfaceKey,
-      prompt: prompt,
       extra: extra,
       added: added,
       methods: methods,
@@ -524,9 +643,8 @@ class PhysicalAccessMethod extends AccessMethod {
   String get factoryName => typeName;
 
   PhysicalAccessMethod({
-    required super.label,
+    super.label,
     super.userInterfaceKey,
-    super.prompt,
     super.methods,
   });
 
@@ -537,16 +655,14 @@ class PhysicalAccessMethod extends AccessMethod {
 
   PhysicalAccessMethod._forClone({
     // Superclass parameters.
-    required final String label,
-    final UserInterfaceKey? userInterfaceKey,
-    final String? prompt,
+    final String? label,
+    final AccessMethodInterfaceKey? userInterfaceKey,
     final String? extra,
     required final DateTime added,
     final AccessMethodTree? methods,
   }) : super._forClone(
           label: label,
           userInterfaceKey: userInterfaceKey,
-          prompt: prompt,
           extra: extra,
           added: added,
           methods: methods,
@@ -557,7 +673,6 @@ class PhysicalAccessMethod extends AccessMethod {
     return PhysicalAccessMethod._forClone(
       label: label,
       userInterfaceKey: userInterfaceKey,
-      prompt: prompt,
       extra: extra,
       added: added,
       methods: methods,
@@ -578,9 +693,8 @@ class BiometricAccessMethod extends AccessMethod {
   String get factoryName => typeName;
 
   BiometricAccessMethod({
-    required super.label,
+    super.label,
     super.userInterfaceKey,
-    super.prompt,
     super.methods,
   });
 
@@ -591,16 +705,14 @@ class BiometricAccessMethod extends AccessMethod {
 
   BiometricAccessMethod._forClone({
     // Superclass parameters.
-    required final String label,
-    final UserInterfaceKey? userInterfaceKey,
-    final String? prompt,
+    final String? label,
+    final AccessMethodInterfaceKey? userInterfaceKey,
     final String? extra,
     required final DateTime added,
     final AccessMethodTree? methods,
   }) : super._forClone(
           label: label,
           userInterfaceKey: userInterfaceKey,
-          prompt: prompt,
           extra: extra,
           added: added,
           methods: methods,
@@ -611,7 +723,6 @@ class BiometricAccessMethod extends AccessMethod {
     return BiometricAccessMethod._forClone(
       label: label,
       userInterfaceKey: userInterfaceKey,
-      prompt: prompt,
       extra: extra,
       added: added,
       methods: methods,
@@ -631,9 +742,8 @@ class TemporalAccessMethod extends AccessMethod {
   String get factoryName => typeName;
 
   TemporalAccessMethod({
-    required super.label,
+    super.label,
     super.userInterfaceKey,
-    super.prompt,
     super.methods,
   });
 
@@ -644,16 +754,14 @@ class TemporalAccessMethod extends AccessMethod {
 
   TemporalAccessMethod._forClone({
     // Superclass parameters.
-    required final String label,
-    final UserInterfaceKey? userInterfaceKey,
-    final String? prompt,
+    final String? label,
+    final AccessMethodInterfaceKey? userInterfaceKey,
     final String? extra,
     required final DateTime added,
     final AccessMethodTree? methods,
   }) : super._forClone(
           label: label,
           userInterfaceKey: userInterfaceKey,
-          prompt: prompt,
           extra: extra,
           added: added,
           methods: methods,
@@ -664,7 +772,6 @@ class TemporalAccessMethod extends AccessMethod {
     return TemporalAccessMethod._forClone(
       label: label,
       userInterfaceKey: userInterfaceKey,
-      prompt: prompt,
       extra: extra,
       added: added,
       methods: methods,
@@ -688,7 +795,6 @@ class AccessMethodConjunction extends AccessMethod {
   AccessMethodConjunction(
     final Set<AccessMethodRef> methods, {
     super.userInterfaceKey,
-    super.prompt,
   }) : super(
           methods: methods,
           label: methods.map((final method) => method.read.label).join(" & "),
@@ -701,16 +807,14 @@ class AccessMethodConjunction extends AccessMethod {
 
   AccessMethodConjunction._forClone({
     // Superclass parameters.
-    required final String label,
-    final UserInterfaceKey? userInterfaceKey,
-    final String? prompt,
+    final String? label,
+    final AccessMethodInterfaceKey? userInterfaceKey,
     final String? extra,
     required final DateTime added,
     final AccessMethodTree? methods,
   }) : super._forClone(
           label: label,
           userInterfaceKey: userInterfaceKey,
-          prompt: prompt,
           extra: extra,
           added: added,
           methods: methods,
@@ -721,7 +825,6 @@ class AccessMethodConjunction extends AccessMethod {
     return AccessMethodConjunction._forClone(
       label: label,
       userInterfaceKey: userInterfaceKey,
-      prompt: prompt,
       extra: extra,
       added: added,
       methods: methods,

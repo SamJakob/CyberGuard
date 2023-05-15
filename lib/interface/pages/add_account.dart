@@ -170,15 +170,29 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
                             _isLoading = true;
                             final formData = addAccountForm.getData();
 
-                            String id = await ref
-                                .read(accountsProvider)
-                                .add(Account(
-                                  accountIdentifier: formData.accountIdentifier,
-                                  name: formData.name,
-                                ));
+                            String id;
+                            if (addAccountForm.hasPassword) {
+                              id = await ref.read(accountsProvider).add(
+                                    Account.withPassword(
+                                      formData.accountIdentifier,
+                                      formData.password,
+                                      name: formData.name,
+                                    ),
+                                  );
+                            } else {
+                              id = await ref.read(accountsProvider).add(
+                                    Account(
+                                      accountIdentifier:
+                                          formData.accountIdentifier,
+                                      name: formData.name,
+                                    ),
+                                  );
+                            }
 
-                            context.pop();
-                            context.push("/accounts/$id");
+                            if (mounted) {
+                              context.pop();
+                              context.push("/accounts/$id");
+                            }
                           } else {
                             // Otherwise, scroll to the start of the form.
                             scrollUp();
@@ -228,8 +242,10 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
                                   );
                             }
 
-                            context.pop();
-                            context.push("/accounts/$id");
+                            if (mounted) {
+                              context.pop();
+                              context.push("/accounts/$id");
+                            }
                           } else {
                             // Otherwise, scroll to the start of the form.
                             scrollUp();

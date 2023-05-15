@@ -56,8 +56,9 @@ class UiScalingService {
 
   /// Re-fetches the main display metrics from dart:ui.
   void updateMetrics() {
-    final devicePixelRatio = window.devicePixelRatio;
-    final physicalSize = window.physicalSize;
+    final devicePixelRatio =
+        PlatformDispatcher.instance.implicitView!.devicePixelRatio;
+    final physicalSize = PlatformDispatcher.instance.implicitView!.physicalSize;
 
     _metrics = UiMetrics(
       devicePixelRatio: devicePixelRatio,
@@ -71,7 +72,8 @@ class UiScalingService {
     _initialized = true;
   }
 
-  T forScreen<T>({required final T tablet, required final T phone}) => isTablet() ? tablet : phone;
+  T forScreen<T>({required final T tablet, required final T phone}) =>
+      isTablet() ? tablet : phone;
 
   /// Heuristically detects whether the device is a tablet based on the device
   /// pixel ratio and corresponding screen size.
@@ -82,9 +84,11 @@ class UiScalingService {
       return false;
     }
 
-    if (_metrics.devicePixelRatio < 2 && (_metrics.physicalWidth >= 1000 || _metrics.physicalHeight >= 1000)) {
+    if (_metrics.devicePixelRatio < 2 &&
+        (_metrics.physicalWidth >= 1000 || _metrics.physicalHeight >= 1000)) {
       return true;
-    } else if (_metrics.devicePixelRatio == 2 && (_metrics.physicalWidth >= 1920 || _metrics.physicalHeight >= 1920)) {
+    } else if (_metrics.devicePixelRatio == 2 &&
+        (_metrics.physicalWidth >= 1920 || _metrics.physicalHeight >= 1920)) {
       return true;
     }
 
@@ -105,8 +109,8 @@ class UiScalingService {
 
     // Register a handler with dart:ui for when the display metrics change.
     if (_onMetricsChange == null) {
-      _onMetricsChange = window.onMetricsChanged;
-      window.onMetricsChanged = () {
+      _onMetricsChange = PlatformDispatcher.instance.onMetricsChanged;
+      PlatformDispatcher.instance.onMetricsChanged = () {
         _service!.updateMetrics();
         _onMetricsChange!();
       };
@@ -120,5 +124,6 @@ class UiScalingService {
 }
 
 extension UIMetricsHelpers on BuildContext {
-  T forScreen<T>({required final T tablet, required final T phone}) => locator.get<UiScalingService>().isTablet() ? tablet : phone;
+  T forScreen<T>({required final T tablet, required final T phone}) =>
+      locator.get<UiScalingService>().isTablet() ? tablet : phone;
 }

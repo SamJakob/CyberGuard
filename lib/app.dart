@@ -1,5 +1,6 @@
 import 'package:cyberguard/const/branding.dart';
-import 'package:cyberguard/data/storage/accounts.dart';
+import 'package:cyberguard/data/storage/aggregated_secure_data.dart';
+import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:cyberguard/data/struct/account.dart';
 import 'package:cyberguard/domain/error.dart';
 import 'package:cyberguard/domain/providers/account.dart';
@@ -51,7 +52,8 @@ final _router = GoRouter(
           path: '/accounts',
           parentNavigatorKey: _shellNavigatorKey,
           pageBuilder: (final context, final state) =>
-              RootScreen.createTabPageBuilder(context, state, AccountsScreen()),
+              RootScreen.createTabPageBuilder(
+                  context, state, const AccountsScreen()),
           routes: [
             GoRoute(
               path: ':account',
@@ -79,7 +81,7 @@ final _router = GoRouter(
               RootScreen.createTabPageBuilder(
             context,
             state,
-            MultiFactorScreen(),
+            const MultiFactorScreen(),
           ),
         )
       ],
@@ -117,13 +119,14 @@ class CGApp extends StatelessWidget {
           return Interface<_CGAppInitData>(
             initializeApp: (final BuildContext context,
                 final InterfaceProtectorMessenger interfaceProtector) async {
-              final accountStorage = AccountStorageService();
+              final secureDataStorage = AggregatedSecureDataStorageService();
+
               UserPresenceProvider? userPresenceProvider;
 
               try {
                 await Future.wait([
-                  // Initialize the account storage service.
-                  accountStorage.initialize(),
+                  // Initialize the secure storage service.
+                  secureDataStorage.initialize(),
                   // Initialize the user presence provider.
                   Future(() async {
                     userPresenceProvider =
@@ -153,14 +156,23 @@ class CGApp extends StatelessWidget {
                 );
               }
 
-              if (!accountStorage.isInitialized) return null;
+              if (!secureDataStorage.isInitialized) return null;
               if (userPresenceProvider == null) return null;
 
               await setupLocator();
-              locator.registerSingleton<AccountStorageService>(accountStorage);
+              locator.registerSingleton<AggregatedSecureDataStorageService>(
+                secureDataStorage,
+              );
+
+              final storedData = await secureDataStorage.load();
+
+              AccessMethodStore.initialize(
+                accessMethods: storedData.accessMethods,
+              );
 
               return _CGAppInitData(
-                initialAccounts: await accountStorage.load(),
+                initialAccounts: storedData.accounts,
+                initialAccessMethods: storedData.accessMethods,
                 userPresenceProvider: userPresenceProvider!,
               );
             },
@@ -174,6 +186,9 @@ class CGApp extends StatelessWidget {
                     (final ref) => AccountsProvider(
                       initialAccounts: data?.initialAccounts,
                     ),
+                  ),
+                  accessMethodProvider.overrideWith(
+                    (final ref) => AccessMethodStore(),
                   ),
                   if (data?.userPresenceProvider != null)
                     userPresenceProvider.overrideWith(
@@ -203,13 +218,18 @@ class CGApp extends StatelessWidget {
 /// in this class should be nullable (unless they are actually optional).
 class _CGAppInitData {
   const _CGAppInitData({
-    required this.initialAccounts,
+    this.initialAccounts,
+    this.initialAccessMethods,
     required this.userPresenceProvider,
   });
 
   /// If there are any [initialAccounts] that were loaded from storage, they
   /// will be passed here.
   final Map<String, Account>? initialAccounts;
+
+  /// If there are any [initialAccessMethods] that were loaded from storage,
+  /// they will be passed here.
+  final Map<String, AccessMethod>? initialAccessMethods;
 
   /// The user presence provider, once initialized, will be passed here.
   /// The initialization step ensures that there is a compliant implementation

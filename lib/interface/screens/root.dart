@@ -1,20 +1,28 @@
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 
 const tabs = [
-  _RootScreenTab(target: '/', icon: HeroIcon(HeroIcons.home), label: "Home"),
   _RootScreenTab(
-      target: '/accounts', icon: HeroIcon(HeroIcons.key), label: "Accounts"),
+    target: '/',
+    icon: HeroIcon(HeroIcons.home),
+    label: "Home",
+  ),
+  _RootScreenTab(
+    target: '/accounts',
+    icon: HeroIcon(HeroIcons.key),
+    label: "Accounts",
+  ),
   _RootScreenTab(
       target: '/connections',
       icon: HeroIcon(HeroIcons.lightBulb),
       label: "Connections"),
   _RootScreenTab(
-      target: '/multi-factor',
-      icon: HeroIcon(HeroIcons.qrCode),
-      label: "Multi-Factor"),
+    target: '/multi-factor',
+    icon: HeroIcon(HeroIcons.qrCode),
+    label: "TOTP Codes",
+  ),
 ];
 
 class RootScreen extends StatelessWidget {

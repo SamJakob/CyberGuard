@@ -1,8 +1,10 @@
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
 
-class AppWordMark extends StatelessWidget {
-  const AppWordMark({final Key? key}) : super(key: key);
+class CGAppWordmark extends StatelessWidget {
+  const CGAppWordmark({
+    final Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(final BuildContext context) {

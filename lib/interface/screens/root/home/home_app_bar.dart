@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:cyberguard/const/interface.dart';
 import 'package:cyberguard/interface/partials/app_word_mark.dart';
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
 
 class CGHomeAppBar extends StatelessWidget {
@@ -102,11 +102,12 @@ class _CGHomeSliverAppBar extends SliverPersistentHeaderDelegate {
                         horizontal: kSpaceUnitPx * 1.5),
                     child: IconTheme(
                       data: Theme.of(context).iconTheme.copyWith(
-                          color: context.colorScheme.onPrimaryContainer),
+                            color: context.colorScheme.onPrimaryContainer,
+                          ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const AppWordMark(),
+                          const CGAppWordmark(),
                           if (actions != null) ...[
                             const Spacer(),
                             ...actions!,

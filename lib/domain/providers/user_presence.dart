@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:cyberguard/const/channels.dart';
 import 'package:cyberguard/domain/error.dart';
+import 'package:cyberguard/domain/services/vibration.dart';
+import 'package:cyberguard/locator.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -96,6 +98,7 @@ class UserPresenceProvider extends StateNotifier<bool>
     );
 
     // Then, update the state to true to indicate that the user is present.
+    locator.get<VibrationService>().vibrateSuccess();
     state = true;
   }
 
@@ -156,6 +159,7 @@ class UserPresenceProvider extends StateNotifier<bool>
 
     // Finally, update the state to false to indicate that the user is not
     // present.
+    locator.get<VibrationService>().vibrateSuccess();
     state = false;
   }
 

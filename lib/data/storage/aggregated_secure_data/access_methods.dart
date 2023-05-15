@@ -1,19 +1,18 @@
 import 'dart:typed_data';
 
-import 'package:cyberguard/data/storage/abstract/storage.dart';
-import 'package:cyberguard/data/struct/account.dart';
+import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:cyberguard/domain/services/abstract/serialization.dart';
 import 'package:messagepack/messagepack.dart';
 
-class AccountSerializationService
-    extends SerializationService<Map<String, Account>, Uint8List> {
+class AccessMethodSerializationService
+    extends SerializationService<Map<String, AccessMethod>, Uint8List> {
   @override
-  Map<String, Account> instantiate() {
-    return <String, Account>{};
+  Map<String, AccessMethod> instantiate() {
+    return <String, AccessMethod>{};
   }
 
   @override
-  Map<String, Account>? deserialize(final Uint8List? data) {
+  Map<String, AccessMethod>? deserialize(final Uint8List? data) {
     if (data == null) return null;
 
     final messageUnpacker = Unpacker(data);
@@ -21,7 +20,7 @@ class AccountSerializationService
 
     final result = instantiate();
     for (int i = 0; i < length; i++) {
-      result[messageUnpacker.unpackString()!] = Account.unpack(
+      result[messageUnpacker.unpackString()!] = AccessMethod.unpack(
         Uint8List.fromList(messageUnpacker.unpackBinary()),
       );
     }
@@ -30,7 +29,7 @@ class AccountSerializationService
   }
 
   @override
-  Uint8List? serialize(final Map<String, Account>? data) {
+  Uint8List? serialize(final Map<String, AccessMethod>? data) {
     // Don't bother encrypting/serializing if there's no data.
     if (data == null || data.isEmpty) return null;
 
@@ -42,13 +41,4 @@ class AccountSerializationService
     });
     return messagePacker.takeBytes();
   }
-}
-
-class AccountStorageService
-    extends EncryptedFileStorageService<Map<String, Account>> {
-  AccountStorageService()
-      : super(
-          name: "Account",
-          serializationService: AccountSerializationService(),
-        );
 }

@@ -2,19 +2,56 @@ import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/interface/partials/account_tile.dart';
 import 'package:cyberguard/interface/partials/root_app_bar.dart';
 import 'package:cyberguard/interface/pages/add_account.dart';
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
+import 'package:cyberguard/interface/utility/levenshtein.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class AccountsScreen extends ConsumerWidget {
-  final ScrollController _scrollController = ScrollController();
-
-  AccountsScreen({final Key? key}) : super(key: key);
+class AccountsScreen extends ConsumerStatefulWidget {
+  const AccountsScreen({final Key? key}) : super(key: key);
 
   @override
-  Widget build(final BuildContext context, final WidgetRef ref) {
-    final List<AccountRef> accounts = ref.watch(accountsProvider).allAccounts;
+  ConsumerState<AccountsScreen> createState() => _AccountsScreenState();
+}
+
+class _AccountsScreenState extends ConsumerState<AccountsScreen> {
+  final ScrollController _scrollController = ScrollController();
+  TextEditingController? _searchController;
+
+  @override
+  void initState() {
+    _searchController = TextEditingController();
+    _searchController?.addListener(_updateSearchFilter);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _searchController?.removeListener(_updateSearchFilter);
+    _searchController?.dispose();
+    super.dispose();
+  }
+
+  void _updateSearchFilter() {
+    setState(() {
+      // For now, just setState to trigger a rebuild.
+    });
+  }
+
+  @override
+  Widget build(final BuildContext context) {
+    final accounts =
+        ref.watch(accountsProvider).allAccounts.where((final accountRef) {
+      // If there is no search query, don't filter anything.
+      if (_searchController!.text.isEmpty) return true;
+
+      // Otherwise, filter by the levenshtein distance.
+      return accountRef.account.name
+              .hasSearchSimilarity(_searchController!.text) ||
+          accountRef.account.accountIdentifier
+              .hasSearchSimilarity(_searchController!.text);
+    }).toList();
 
     return Stack(
       children: [
@@ -31,6 +68,7 @@ class AccountsScreen extends ConsumerWidget {
                   child: SizedBox(
                     height: 50,
                     child: TextField(
+                      controller: _searchController!,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: context.colorScheme.surface,

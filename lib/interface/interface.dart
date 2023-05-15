@@ -181,8 +181,11 @@ class _InterfaceState<InterfaceInitData>
               _initializationState = _InterfaceInitState.initialized;
             });
             setLoading(false);
-          } catch (ex) {
-            if (kDebugMode) print(ex);
+          } catch (ex, st) {
+            if (kDebugMode) {
+              print(ex);
+              print(st);
+            }
 
             setState(() {
               _initializationState = _InterfaceInitState.error;

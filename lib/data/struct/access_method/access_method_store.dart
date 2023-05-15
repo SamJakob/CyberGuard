@@ -8,6 +8,7 @@ class AccessMethodRefEditor<T extends AccessMethod> {
 
   AccessMethodRefEditor._(this._owner) : method = _owner.read as T;
 
+  /// Performs [changes] to the [AccessMethod] in this editor.
   AccessMethodRefEditor<T> update(
     final AccessMethodRefEditorChange<T> changes,
   ) {
@@ -15,8 +16,22 @@ class AccessMethodRefEditor<T extends AccessMethod> {
     return this;
   }
 
+  /// Commits the changes made to the [AccessMethod] in this editor.
+  /// This will propagate the changes back to the original [AccessMethodRef]
+  /// that this editor was created from.
   void commit() {
     AccessMethodStore().update(_owner, method);
+  }
+
+  /// Deletes the [AccessMethod] from the [AccessMethodTree] that it is in.
+  /// This will propagate the changes back to the original [AccessMethodRef]
+  /// that this editor was created from.
+  ///
+  /// **A [commit] call is not necessary for this change to be propagated, it
+  /// will be propagated immediately.**
+  void deleteMethod() {
+    _owner._owner?.remove(_owner);
+    AccessMethodStore().delete(_owner);
   }
 }
 
@@ -43,6 +58,8 @@ class AccessMethodRef<T extends AccessMethod>
   /// UNDERLYING [AccessMethod]**.
   T get read =>
       AccessMethodStore()._accessMethods[id]!.clone(keepPriority: true) as T;
+
+  U readAs<U extends AccessMethod>() => read as U;
 
   int _priority;
 
@@ -105,6 +122,10 @@ class AccessMethodRef<T extends AccessMethod>
     return priority.compareTo(other.priority);
   }
 
+  bool isEquivalentTo(final AccessMethodRef other) {
+    return id == other.id;
+  }
+
   @override
   String toString() {
     // Add priority if this is part of a tree.
@@ -137,6 +158,8 @@ class AccessMethodRef<T extends AccessMethod>
 /// accounts).
 class AccessMethodStore with ChangeNotifier {
   static AccessMethodStore? _instance;
+
+  static bool get isInitialized => _instance != null;
 
   factory AccessMethodStore() {
     return _instance!;
@@ -206,4 +229,11 @@ class AccessMethodStore with ChangeNotifier {
   void destroy() {
     _instance = null;
   }
+
+  Map<String, AccessMethod> snapshot() {
+    return Map<String, AccessMethod>.unmodifiable(_accessMethods);
+  }
 }
+
+final accessMethodProvider =
+    ChangeNotifierProvider<AccessMethodStore>((final ref) => throw TypeError());

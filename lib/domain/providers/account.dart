@@ -1,4 +1,4 @@
-import 'package:cyberguard/data/storage/accounts.dart';
+import 'package:cyberguard/data/storage/aggregated_secure_data.dart';
 import 'package:cyberguard/data/struct/account.dart';
 import 'package:cyberguard/locator.dart';
 import 'package:flutter/material.dart';
@@ -53,13 +53,35 @@ class AccountsProvider extends ChangeNotifier {
   bool hasWithName(final String name) => getByName(name).isNotEmpty;
   bool hasWithId(final String id) => get(id) != null;
 
-  bool hasNameAndAccountIdentifier(
-      {required final String name, required final String accountIdentifier}) {
-    return _accounts.entries.cast<MapEntry<String, Account>>().any(
-          (final MapEntry<String, Account> entry) =>
-              entry.value.name == name &&
-              entry.value.accountIdentifier == accountIdentifier,
-        );
+  /// Checks whether an account with the given name and account identifier
+  /// combination exists.
+  /// Optionally, [exclude] may be specified to ignore a specific account
+  /// (which might be useful when editing an account).
+  bool hasNameAndAccountIdentifier({
+    required final String name,
+    required final String accountIdentifier,
+    final Account? exclude,
+  }) {
+    // Get a stream of all the account entries.
+    var stream = _accounts.entries.cast<MapEntry<String, Account>>();
+
+    // If exclude is specified, filter out the account with the same name and
+    // account identifier as the account to exclude.
+    if (exclude != null) {
+      stream = stream.where(
+        (final element) =>
+            element.value.name != exclude.name &&
+            element.value.accountIdentifier != exclude.accountIdentifier,
+      );
+    }
+
+    // Finally, check whether any of the accounts in the stream have the same
+    // name and account identifier as the account to check for.
+    return stream.any(
+      (final MapEntry<String, Account> entry) =>
+          entry.value.name == name &&
+          entry.value.accountIdentifier == accountIdentifier,
+    );
   }
 
   List<AccountRef> getByName(final String name) {
@@ -84,7 +106,7 @@ class AccountsProvider extends ChangeNotifier {
   Future<String> add(final Account account) async {
     String id = _uniqueId();
     _accounts[id] = account;
-    await _saveData();
+    await save();
     notifyListeners();
     return id;
   }
@@ -92,7 +114,7 @@ class AccountsProvider extends ChangeNotifier {
   /// Delete an account by its [id].
   Future<void> deleteById(final String id) async {
     _accounts.remove(id);
-    await _saveData();
+    await save();
     notifyListeners();
   }
 
@@ -100,13 +122,17 @@ class AccountsProvider extends ChangeNotifier {
   Future<void> delete(final Account account) async {
     _accounts.removeWhere(
         (final String key, final Account value) => value == account);
-    await _saveData();
+    await save();
     notifyListeners();
   }
 
   /// Write the accounts data to storage.
-  Future<void> _saveData() async {
-    await locator.get<AccountStorageService>().save(_accounts);
+  Future<void> save() async {
+    await locator
+        .get<AggregatedSecureDataStorageService>()
+        .save(CGAggregatedSecureData(
+          accounts: _accounts,
+        ));
   }
 }
 

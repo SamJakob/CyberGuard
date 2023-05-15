@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:cyberguard/const/interface.dart';
 import 'package:cyberguard/interface/partials/app_word_mark.dart';
-import 'package:cyberguard/interface/utility/context.dart';
+import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:go_router/go_router.dart';
@@ -108,7 +108,7 @@ class _RootAppBarState extends State<RootAppBar> {
                         opacity: AlwaysStoppedAnimation<double>(
                           const Interval(0.7, 1.0).transform(scrollProgress),
                         ),
-                        child: const AppWordMark(),
+                        child: const CGAppWordmark(),
                       ),
                     ),
                   FadeTransition(
