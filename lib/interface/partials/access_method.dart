@@ -6,6 +6,7 @@ import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/domain/providers/user_presence.dart';
 import 'package:cyberguard/interface/pages/add_access_method.dart';
 import 'package:cyberguard/interface/pages/totp_scan.dart';
+import 'package:cyberguard/interface/partials/account_tile_icon.dart';
 import 'package:cyberguard/interface/partials/totp_tile.dart';
 import 'package:cyberguard/interface/transitions/apollo_page_route.dart';
 import 'package:cyberguard/interface/utility/clipboard.dart';
@@ -87,6 +88,13 @@ class AddAccessMethodButton extends StatelessWidget {
               value: AccessMethodInterfaceKey.sms,
               child: const Text(
                 "SMS Code (Text Message 2FA Code)",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const PopupMenuItem(
+              value: AccessMethodInterfaceKey.recoveryEmail,
+              child: Text(
+                "Recovery Email Address",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -296,7 +304,7 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
 
   Future<void> save() async {
     // Don't do anything if validation fails.
-    if (!_formKey.currentState!.validate()) {
+    if (!(_formKey.currentState?.validate() ?? true)) {
       return;
     }
 
@@ -360,21 +368,29 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
           ),
         ));
         break;
+      case AccessMethodInterfaceKey.recoveryEmail:
       case AccessMethodInterfaceKey.otherAccount:
-        if (!ref
-            .read(accountsProvider)
-            .hasWithId(_dataEditingController.text)) {
+        final accountId = _dataEditingController.text;
+        setState(() {
+          _dataEditingController.text = "";
+        });
+
+        if (!ref.read(accountsProvider).hasWithId(accountId)) {
           context.showErrorSnackbar(
             message: "There was a problem adding the access method.",
           );
           return;
         }
         widget.onCreate?.call(AccessMethodStore().register(
-          ExistingAccountAccessMethod(
-            _dataEditingController.text,
-            userInterfaceKey: AccessMethodInterfaceKey.otherAccount,
-            label: label,
-          ),
+          interfaceKey == AccessMethodInterfaceKey.recoveryEmail
+              ? RecoveryEmailAccessMethod(accountId,
+                  userInterfaceKey: AccessMethodInterfaceKey.recoveryEmail,
+                  label: label)
+              : ExistingAccountAccessMethod(
+                  accountId,
+                  userInterfaceKey: AccessMethodInterfaceKey.otherAccount,
+                  label: label,
+                ),
         ));
       default:
         break;
@@ -447,8 +463,11 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
       children: [
         if ((!alreadyExists ||
                 interfaceKey == AccessMethodInterfaceKey.securityQuestion) &&
-            interfaceKey != AccessMethodInterfaceKey.totp &&
-            interfaceKey != AccessMethodInterfaceKey.otherAccount)
+            ![
+              AccessMethodInterfaceKey.totp,
+              AccessMethodInterfaceKey.otherAccount,
+              AccessMethodInterfaceKey.recoveryEmail
+            ].contains(interfaceKey))
           TextFormField(
             controller: _labelEditingController,
             readOnly: !widget.isEditing,
@@ -480,6 +499,15 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
                       final String valueToCopy;
                       if (widget.method!.read is KnowledgeAccessMethod) {
                         valueToCopy = _dataEditingController.text;
+                      } else if (widget.method!.read
+                          is RecoveryEmailAccessMethod) {
+                        valueToCopy = ref
+                                .read(accountsProvider)
+                                .get(widget.method!
+                                    .readAs<RecoveryEmailAccessMethod>()
+                                    .accountId)
+                                ?.accountIdentifier ??
+                            "";
                       } else {
                         valueToCopy = _labelEditingController.text;
                       }
@@ -694,6 +722,7 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
             ),
           ],
         );
+      case AccessMethodInterfaceKey.recoveryEmail:
       case AccessMethodInterfaceKey.otherAccount:
         if (alreadyExists) {
           final account = ref.read(accountsProvider).get(
@@ -701,16 +730,26 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
 
           return Row(
             children: [
-              const HeroIcon(HeroIcons.link),
+              account?.hasIconUrl ?? false
+                  ? AccountTileIcon(account: account)
+                  : HeroIcon(
+                      interfaceKey == AccessMethodInterfaceKey.recoveryEmail
+                          ? HeroIcons.envelope
+                          : HeroIcons.link),
               const SizedBox(width: 20),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Linked Account",
-                      style: TextStyle(fontSize: 13),
+                    Text(
+                      interfaceKey == AccessMethodInterfaceKey.recoveryEmail
+                          ? "Recovery Email"
+                          : "Linked Account",
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       account!.name,
@@ -718,6 +757,7 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
                         fontSize: 20,
                       ),
                     ),
+                    Text(account.accountIdentifier),
                   ],
                 ),
               )
@@ -734,17 +774,33 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
               .allAccounts
               .where((final accountRef) => accountRef.account != account)
               .where((final accountRef) => !account.accessMethods
-                  .hasMethodWhere(((final AccessMethodRef methodRef) =>
-                      methodRef.read.userInterfaceKey ==
-                          AccessMethodInterfaceKey.otherAccount &&
-                      methodRef
-                              .readAs<ExistingAccountAccessMethod>()
-                              .accountId ==
-                          accountRef.id)))
+                      .hasMethodWhere((final AccessMethodRef methodRef) {
+                    // Filter out any accounts that are already linked.
+                    bool filter = [
+                          AccessMethodInterfaceKey.otherAccount,
+                          AccessMethodInterfaceKey.recoveryEmail
+                        ].contains(methodRef.read.userInterfaceKey) &&
+                        methodRef
+                                .readAs<ExistingAccountAccessMethod>()
+                                .accountId ==
+                            accountRef.id;
+
+                    // If we're editing a recovery email method, filter out
+                    // any accounts that aren't an email.
+                    if (interfaceKey ==
+                        AccessMethodInterfaceKey.recoveryEmail) {
+                      filter |= !accountRef.account.isEmailAccount;
+                    }
+
+                    return filter;
+                  }))
               .map(
                 (final accountRef) => DropdownMenuItem<String>(
                   value: accountRef.id,
-                  child: Text(accountRef.account.name),
+                  child: Text(interfaceKey ==
+                          AccessMethodInterfaceKey.recoveryEmail
+                      ? "${accountRef.account.accountIdentifier} (${accountRef.account.name})"
+                      : accountRef.account.name),
                 ),
               )
               .toList(),

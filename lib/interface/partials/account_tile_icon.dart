@@ -9,11 +9,13 @@ import 'package:flutter/material.dart';
 class AccountTileIcon extends StatelessWidget {
   final Account? account;
   final String? label;
+  final double? size;
 
   const AccountTileIcon({
     super.key,
     this.account,
     this.label,
+    this.size,
   }) : assert(account != null || label != null,
             "Either account or label must be provided.");
 
@@ -21,8 +23,8 @@ class AccountTileIcon extends StatelessWidget {
   Widget build(final BuildContext context) {
     if (account != null && account!.hasIconUrl) {
       return Container(
-        width: 50,
-        height: 50,
+        width: size ?? 50,
+        height: size ?? 50,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(9),
           image: DecorationImage(
@@ -34,8 +36,8 @@ class AccountTileIcon extends StatelessWidget {
     }
 
     return Container(
-      width: 50,
-      height: 50,
+      width: size ?? 50,
+      height: size ?? 50,
       decoration: BoxDecoration(
         color:
             context.getAccentColorFor(account != null ? account!.name : label!),

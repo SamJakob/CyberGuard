@@ -61,6 +61,12 @@ class AccessMethodRef<T extends AccessMethod>
 
   U readAs<U extends AccessMethod>() => read as U;
 
+  bool isA<U extends AccessMethod>() => isAn<U>();
+  bool isAn<U extends AccessMethod>() => T is U || read is U;
+
+  bool isNotA<U extends AccessMethod>() => isNotAn<U>();
+  bool isNotAn<U extends AccessMethod>() => !isA<U>();
+
   int _priority;
 
   /// The same [AccessMethod] may not exist in multiple trees, and should
@@ -185,6 +191,36 @@ class AccessMethodStore with ChangeNotifier {
     final id = _uniqueId();
     _accessMethods[id] = method;
     return AccessMethodRef._(id);
+  }
+
+  /// Checks if [id] exists in the registry and returns a reference to it if
+  /// it does.
+  AccessMethodRef<T>? newReferenceFromId<T extends AccessMethod>(
+    final String id,
+  ) {
+    // If the key exists, simply promote [id] to an [AccessMethodRef].
+    if (_accessMethods.containsKey(id)) {
+      return AccessMethodRef._(id);
+    }
+
+    // Otherwise, return null.
+    return null;
+  }
+
+  /// Returns a unique reference to an [AccessMethod]. This can be used by
+  /// multiple accounts to reference the same underlying [AccessMethod], but
+  /// associate different metadata (e.g., priority) with the access method.
+  AccessMethodRef<T> newReferenceTo<T extends AccessMethod>(final T method) {
+    // If the method is registered (which it almost certainly should be to
+    // even be usable), return a reference to it.
+    if (_accessMethods.containsValue(method)) {
+      return AccessMethodRef._(_accessMethods.keys.firstWhere(
+        (final String key) => _accessMethods[key] == method,
+      ));
+    }
+
+    // Otherwise delegate to [register].
+    return register(method);
   }
 
   T? lookup<T extends AccessMethod>(final AccessMethodRef<T> ref) {

@@ -55,6 +55,13 @@ class Account with ChangeNotifier {
     notifyListeners();
   }
 
+  bool _isEmailAddress;
+  bool get isEmailAccount => _isEmailAddress;
+  set isEmailAccount(final bool isEmailAddress) {
+    _isEmailAddress = isEmailAddress;
+    notifyListeners();
+  }
+
   /// Whether the device provides access to the account.
   bool _deviceProvidesAccess;
   bool get deviceProvidesAccess => _deviceProvidesAccess;
@@ -64,17 +71,18 @@ class Account with ChangeNotifier {
   }
 
   /// Whether the account is shared with other people.
-  bool _accountIsShared;
-  bool get accountIsShared => _accountIsShared;
+  bool _isShared;
+  bool get accountIsShared => _isShared;
   set accountIsShared(final bool accountIsShared) {
-    _accountIsShared = accountIsShared;
+    _isShared = accountIsShared;
     notifyListeners();
   }
 
-  int _accountPriority;
-  int get accountPriority => _accountPriority;
+  /// The user's priority for the account (in terms of importance).
+  int _userPriority;
+  int get accountPriority => _userPriority;
   set accountPriority(final int accountPriority) {
-    _accountPriority = accountPriority;
+    _userPriority = accountPriority;
     notifyListeners();
   }
 
@@ -89,6 +97,7 @@ class Account with ChangeNotifier {
     final String? serviceUrl,
     final String? serviceChangePasswordUrl,
     final String? iconUrl,
+    final bool? isEmailAddress,
     final bool? deviceProvidesAccess,
     final bool? accountIsShared,
     final int? accountPriority,
@@ -98,9 +107,10 @@ class Account with ChangeNotifier {
         _serviceUrl = serviceUrl,
         _serviceChangePasswordUrl = serviceChangePasswordUrl,
         _iconUrl = iconUrl,
+        _isEmailAddress = isEmailAddress ?? false,
         _deviceProvidesAccess = deviceProvidesAccess ?? false,
-        _accountIsShared = accountIsShared ?? false,
-        _accountPriority = accountPriority ?? 1 {
+        _isShared = accountIsShared ?? false,
+        _userPriority = accountPriority ?? 1 {
     // Proxy change notifications from the access method tree to the
     // account.
     accessMethods.addListener(notifyListeners);
@@ -133,9 +143,10 @@ class Account with ChangeNotifier {
       ..packString(_serviceUrl)
       ..packString(_serviceChangePasswordUrl)
       ..packString(_iconUrl)
+      ..packBool(_isEmailAddress)
       ..packBool(_deviceProvidesAccess)
-      ..packBool(_accountIsShared)
-      ..packInt(_accountPriority)
+      ..packBool(_isShared)
+      ..packInt(_userPriority)
       ..packBinary(accessMethods.pack());
     return messagePacker.takeBytes();
   }
@@ -149,6 +160,7 @@ class Account with ChangeNotifier {
     String? serviceUrl = messageUnpacker.unpackString();
     String? serviceChangePasswordUrl = messageUnpacker.unpackString();
     String? iconUrl = messageUnpacker.unpackString();
+    bool? isEmailAddress = messageUnpacker.unpackBool();
     bool? deviceProvidesAccess = messageUnpacker.unpackBool();
     bool? accountIsShared = messageUnpacker.unpackBool();
     int? accountPriority = messageUnpacker.unpackInt() ?? 1;
@@ -163,6 +175,7 @@ class Account with ChangeNotifier {
       serviceUrl: serviceUrl,
       serviceChangePasswordUrl: serviceChangePasswordUrl,
       iconUrl: iconUrl,
+      isEmailAddress: isEmailAddress,
       deviceProvidesAccess: deviceProvidesAccess,
       accountIsShared: accountIsShared,
       accountPriority: accountPriority,

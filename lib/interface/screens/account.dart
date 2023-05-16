@@ -361,7 +361,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     },
                     autocorrect: false,
                     decoration: InputDecoration(
-                      labelText: "Username, Email or ID",
+                      labelText: account.isEmailAccount
+                          ? "Email Address"
+                          : "Username, Email or ID",
                       suffixIcon: IconButton(
                         icon: const HeroIcon(
                           HeroIcons.clipboard,
@@ -395,6 +397,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     "account setup and provide you with useful information.",
                   ),
                   const SizedBox(height: 20),
+                  ExtraInformationTile(
+                    isEditing: _isEditing,
+                    title: "Is Email Account",
+                    description: "Enable this option if this account is your "
+                        "e-mail address.",
+                    value: account.isEmailAccount,
+                    colorIfTrue: Colors.white,
+                    colorIfFalse: Colors.white,
+                    onChanged: (final bool value) async {
+                      await save(
+                        withChanges: (final account) =>
+                            account.isEmailAccount = value,
+                      );
+                    },
+                  ),
                   ExtraInformationTile(
                     isEditing: _isEditing,
                     title: "Device provides access",

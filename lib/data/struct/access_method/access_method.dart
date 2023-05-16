@@ -327,6 +327,9 @@ enum AccessMethodInterfaceKey {
   /// Another account.
   otherAccount("Other Account"),
 
+  /// The user interface key for a recovery email address access method.
+  recoveryEmail("Recovery Email Address"),
+
   /// The user interface key for a password access method.
   password("Password, Passphrase or PIN"),
 
@@ -562,6 +565,72 @@ class ExistingAccountAccessMethod extends AccessMethod {
   @override
   String toString() =>
       _toString('ExistingAccountAccessMethod', 'accountId = $accountId');
+
+  @override
+  Uint8List pack({final AccessMethodAdditionalFieldsPacker? additionalFields}) {
+    return super.pack(additionalFields: (final Packer messagePacker) {
+      messagePacker.packString(accountId);
+    });
+  }
+}
+
+/// An access method implementation that indicates usage of another existing
+/// account as an access method.
+/// For example: "Sign in with Google", "Sign in with Apple", etc.
+class RecoveryEmailAccessMethod extends ExistingAccountAccessMethod {
+  static const String typeName = "RecoveryEmailAccessMethod";
+
+  @override
+  String get factoryName => typeName;
+
+  @override
+  AccessMethodInterfaceKey get userInterfaceKey =>
+      AccessMethodInterfaceKey.recoveryEmail;
+
+  RecoveryEmailAccessMethod(
+    super.accountId, {
+    super.label,
+    super.methods,
+    super.userInterfaceKey,
+  });
+
+  RecoveryEmailAccessMethod.byUnpacking(
+    final Unpacker messageUnpacker, {
+    final AccessMethodTree? owner,
+  }) : super.byUnpacking(messageUnpacker, owner: owner);
+
+  RecoveryEmailAccessMethod._forClone(
+    final String accountId, {
+    // Superclass parameters.
+    final String? label,
+    final AccessMethodInterfaceKey? userInterfaceKey,
+    final String? extra,
+    required final DateTime added,
+    final AccessMethodTree? methods,
+  }) : super._forClone(
+          accountId,
+          label: label,
+          userInterfaceKey: userInterfaceKey,
+          extra: extra,
+          added: added,
+          methods: methods,
+        );
+
+  @override
+  RecoveryEmailAccessMethod clone({final bool keepPriority = false}) {
+    return RecoveryEmailAccessMethod._forClone(
+      accountId,
+      label: label,
+      userInterfaceKey: userInterfaceKey,
+      extra: extra,
+      added: added,
+      methods: methods,
+    );
+  }
+
+  @override
+  String toString() =>
+      _toString('RecoveryEmailAccessMethod', 'accountId = $accountId');
 
   @override
   Uint8List pack({final AccessMethodAdditionalFieldsPacker? additionalFields}) {
@@ -875,6 +944,14 @@ class AccessMethodRegistry {
     // Otherwise, initialize it.
     _instance = AccessMethodRegistry._();
 
+    registerMethod(
+      ExistingAccountAccessMethod.typeName,
+      ExistingAccountAccessMethod.byUnpacking,
+    );
+    registerMethod(
+      RecoveryEmailAccessMethod.typeName,
+      RecoveryEmailAccessMethod.byUnpacking,
+    );
     registerMethod(
       KnowledgeAccessMethod.typeName,
       KnowledgeAccessMethod.byUnpacking,

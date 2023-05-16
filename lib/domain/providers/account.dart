@@ -50,6 +50,9 @@ class AccountsProvider extends ChangeNotifier {
   /// Get an account by its [id].
   Account? get(final String id) => _accounts[id];
 
+  /// Get an [AccountRef] by its [id].
+  AccountRef? getRef(final String id) => AccountRef(id, _accounts[id]!);
+
   bool hasWithName(final String name) => getByName(name).isNotEmpty;
   bool hasWithId(final String id) => get(id) != null;
 
