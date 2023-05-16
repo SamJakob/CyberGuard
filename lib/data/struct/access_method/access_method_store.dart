@@ -158,6 +158,49 @@ class AccessMethodRef<T extends AccessMethod>
           _priority == other._priority);
 }
 
+class EphemeralAccessMethodRef<T extends AccessMethod>
+    extends AccessMethodRef<T> {
+  final AccessMethod method;
+
+  @override
+  T get read => method as T;
+
+  EphemeralAccessMethodRef(this.method, {final int? priority})
+      : super._(
+          "EPHEMERAL_${DateTime.now().microsecondsSinceEpoch}_${const Uuid().v4()}",
+          priority: priority,
+        );
+
+  @override
+  AccessMethodRef<T> clone({final bool keepPriority = false}) {
+    return EphemeralAccessMethodRef(
+      method,
+      priority: keepPriority ? priority : null,
+    );
+  }
+
+  /// Deliberately unimplemented. Ephemeral methods mustn't be stored.
+  @override
+  Uint8List pack() {
+    throw UnimplementedError();
+  }
+
+  /// See [pack].
+  @override
+  factory EphemeralAccessMethodRef.unpack(final Uint8List data) {
+    throw UnimplementedError();
+  }
+
+  /// See [pack].
+  @override
+  AccessMethodRefEditor<T> get editor => throw UnimplementedError();
+
+  @override
+  String toString() {
+    return 'EphemeralAccessMethodRef';
+  }
+}
+
 /// A centralized store for [AccessMethod]s. Returns an [AccessMethodRef] that
 /// can be included in [Account]s to reference a single underlying
 /// [AccessMethod]. (e.g., where one access method is shared by multiple
@@ -172,6 +215,11 @@ class AccessMethodStore with ChangeNotifier {
   }
 
   final Map<String, AccessMethod> _accessMethods;
+
+  Map<String, AccessMethod> get allAccessMethods =>
+      Map.unmodifiable(_accessMethods);
+
+  List<AccessMethod> get listAccessMethods => _accessMethods.values.toList();
 
   AccessMethodStore._initialize({
     final Map<String, AccessMethod>? accessMethods,
@@ -207,20 +255,32 @@ class AccessMethodStore with ChangeNotifier {
     return null;
   }
 
-  /// Returns a unique reference to an [AccessMethod]. This can be used by
-  /// multiple accounts to reference the same underlying [AccessMethod], but
-  /// associate different metadata (e.g., priority) with the access method.
-  AccessMethodRef<T> newReferenceTo<T extends AccessMethod>(final T method) {
-    // If the method is registered (which it almost certainly should be to
-    // even be usable), return a reference to it.
+  /// Checks if the [AccessMethodStore] has already created a reference to the
+  /// [AccessMethod] and returns it if it has. (This would thus imply that the
+  /// method is NOT ephemeral, because ephemeral methods are not stored in the
+  /// registry).
+  bool hasReferenceTo(final AccessMethod method) {
+    return _accessMethods.containsValue(method);
+  }
+
+  /// Alias to [register] for readability.
+  AccessMethodRef<T> createReferenceTo<T extends AccessMethod>(final T method) {
+    return register(method);
+  }
+
+  /// Like [newReferenceTo] but doesn't create a new reference if one already
+  /// exists.
+  AccessMethodRef<T> getReferenceTo<T extends AccessMethod>(final T method) {
     if (_accessMethods.containsValue(method)) {
       return AccessMethodRef._(_accessMethods.keys.firstWhere(
         (final String key) => _accessMethods[key] == method,
       ));
     }
 
-    // Otherwise delegate to [register].
-    return register(method);
+    print(method);
+    throw StateError(
+      "Attempted to obtain a reference to an unregistered access method.",
+    );
   }
 
   T? lookup<T extends AccessMethod>(final AccessMethodRef<T> ref) {

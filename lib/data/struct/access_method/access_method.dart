@@ -60,7 +60,7 @@ typedef AccessMethodTreeSort = int Function(
 /// converting this to an immutable data structure and exposing a view class
 /// which supports sorting.
 class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
-  /// Simply uses [AccessMethod.compareTo] to compare values.
+  /// Simply uses [AccessMethodRef.compareTo] to compare values.
   static int defaultSort(final AccessMethodRef a, final AccessMethodRef b) =>
       a.compareTo(b);
 
@@ -866,7 +866,10 @@ class AccessMethodConjunction extends AccessMethod {
     super.userInterfaceKey,
   }) : super(
           methods: methods,
-          label: methods.map((final method) => method.read.label).join(" & "),
+          label: methods
+              .map((final method) =>
+                  method.read.label ?? method.read.userInterfaceKey?.name)
+              .join(" & "),
         );
 
   AccessMethodConjunction.byUnpacking(
@@ -911,7 +914,7 @@ class AccessMethodConjunction extends AccessMethod {
 class DuplicateAccessMethodEntryStateError extends StateError {
   DuplicateAccessMethodEntryStateError()
       : super(
-          "An AccessMethod may only belong to one AccessMethodTree but an AccessMethod "
+          "An AccessMethodRef may only belong to one AccessMethodTree but an AccessMethodRef "
           "already belonging to a tree was about to be added to another tree.\nIt must either be "
           "removed from the initial tree first, or cloned before being added to the new one.",
         );

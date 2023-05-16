@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 /// A [Pair] is an ordered pair of two objects of the same type, [T]. It is
 /// used to represent a directed edge in a [Graph].
 class Pair<T> {
@@ -82,6 +84,40 @@ class Vertex {
       .where((final entry) => entry.value.contains(this))
       .map((final entry) => entry.key)
       .toSet();
+
+  /// Convenience getter to recursively get the dependencies of this [Vertex],
+  /// by also getting their dependencies, and so on.
+  Set<Vertex> get recursiveDependencies {
+    final Set<Vertex> visited = {};
+    final Queue<Vertex> toCheck = Queue.from(dependencies);
+
+    while (toCheck.isNotEmpty) {
+      final Vertex vertex = toCheck.removeFirst();
+      if (!visited.contains(vertex)) {
+        visited.add(vertex);
+        toCheck.addAll(vertex.dependencies);
+      }
+    }
+
+    return visited;
+  }
+
+  /// Convenience getter to recursively get the dependents on this [Vertex],
+  /// by also getting their dependents, and so on.
+  Set<Vertex> get recursiveDependents {
+    final Set<Vertex> visited = {};
+    final Queue<Vertex> toCheck = Queue.from(dependents);
+
+    while (toCheck.isNotEmpty) {
+      final Vertex vertex = toCheck.removeFirst();
+      if (!visited.contains(vertex)) {
+        visited.add(vertex);
+        toCheck.addAll(vertex.dependents);
+      }
+    }
+
+    return visited;
+  }
 }
 
 /// A [CommentedEdge] is an edge in a [Graph] with a comment. This class is
@@ -132,6 +168,92 @@ class Graph<T extends Vertex> {
   /// Returns a set of distinct [Vertex]es if found, otherwise an empty set.
   Set<T> verticesWhere(final bool Function(T vertex) test) =>
       vertices.where(test).toSet();
+
+  /// Convenience method to check if one vertex can access another vertex.
+  bool canReach({
+    required final Vertex from,
+    required final Vertex to,
+  }) {
+    // Record the set of visited nodes.
+    final Set<Vertex> visited = {};
+    // Use a queue to perform a breadth-first search of to's dependencies.
+    final Queue<Vertex> queue = Queue.from(to.dependencies);
+
+    // While there are nodes to search...
+    while (queue.isNotEmpty) {
+      // Get the next node to check.
+      final Vertex current = queue.removeFirst();
+
+      // If the current node is 'from', then from must be reachable from to.
+      if (current == from) {
+        return true;
+      }
+
+      // Otherwise, if the current node isn't one we've checked, add it to the
+      // visited set and add its dependencies to the queue.
+      if (!visited.contains(current)) {
+        visited.add(current);
+        queue.addAll(current.dependencies);
+      }
+    }
+
+    return false;
+  }
+
+  /// Convenience method to check if one vertex can access another vertex,
+  /// but also returns the journey taken to get there.
+  /// If [generateEdgeComment] is specified, then it will be used to generate
+  /// a comment for each edge in the journey (where a comment doesn't already
+  /// exist).
+  List<String>? journey({
+    required final T from,
+    required final T to,
+    final String? Function(T from, T to)? generateEdgeComment,
+  }) {
+    Iterable<(T, List<String>)> expandVertexToRecords(
+      final T vertex, [
+      final List<String>? existingJourney,
+    ]) {
+      return vertex.dependencies.map((final Vertex dependency) {
+        final List<String> journey = existingJourney ?? [];
+        if (hasEdgeComment(from: vertex, to: dependency as T)) {
+          journey.add(getEdgeComment(from: vertex, to: dependency)!);
+        } else if (generateEdgeComment != null) {
+          final generatedComment = generateEdgeComment(vertex, dependency);
+          if (generatedComment != null) journey.add(generatedComment);
+        }
+        return (dependency, journey);
+      });
+    }
+
+    // Record the set of visited nodes.
+    final Set<Vertex> visited = {};
+    // Use a queue to perform a breadth-first search of to's dependencies.
+    final Queue<(Vertex, List<String>)> queue =
+        Queue.from(expandVertexToRecords(to));
+
+    // While there are nodes to search...
+    while (queue.isNotEmpty) {
+      // Get the next node to check.
+      final (Vertex, List<String>) current = queue.removeFirst();
+
+      // If the current node is 'from', then from must be reachable from to.
+      if (current.$1 == from) {
+        return current.$2;
+      }
+
+      // Otherwise, if the current node isn't one we've checked, add it to the
+      // visited set and add its dependencies to the queue.
+      if (!visited.contains(current.$1)) {
+        visited.add(current.$1);
+        queue.addAll(expandVertexToRecords(current.$1 as T, current.$2));
+      }
+    }
+
+    // If we've exhausted the queue without finding 'from', then 'from' is not
+    // reachable from 'to'.
+    return null;
+  }
 
   /// Assigns a comment to a directed mapping.
   void setEdgeComment({
@@ -195,12 +317,15 @@ class Graph<T extends Vertex> {
   /// Adds edges from a source [Vertex] to a set of sink [Vertex]es.
   /// This exposes a logical mapping of a source (e.g., an access method) to a
   /// sink (e.g., an account) for clarity.
-  /// If specified, the [comment] will be applied to each edge. If you need
-  /// individual comments, you must add them manually with [addEdge].
+  /// If specified, the [comment] will be applied to each edge. Otherwise,
+  /// if [commentGenerator] is specified, it will be used to generate a comment
+  /// for each edge. If neither is specified, no comment will be added.
+  /// Note that [comment] overrides [commentGenerator] if it is specified.
   void addEdges({
     required final Set<T> from,
     required final T to,
     final String? comment,
+    final String? Function(T from, T to)? commentGenerator,
   }) {
     // If the graph does not contain the source vertex, add it.
     if (!_mapping.containsKey(to)) {
@@ -211,6 +336,15 @@ class Graph<T extends Vertex> {
     _mapping[to]!.addAll(from);
     if (comment != null) {
       setEdgeComments(from: from, to: to, comment: comment);
+    } else {
+      if (commentGenerator != null) {
+        for (final fromNode in from) {
+          final generatedComment = commentGenerator(fromNode, to);
+          if (generatedComment != null) {
+            setEdgeComment(from: fromNode, to: to, comment: generatedComment);
+          }
+        }
+      }
     }
   }
 
