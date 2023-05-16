@@ -40,6 +40,8 @@ class CGSettings {
 /// the rest of the app to access and alter the user-defined settings,
 /// throughout the app.
 class SettingsProvider extends StateNotifier<CGSettings> {
+  CGSettings get appSettings => state;
+
   SettingsProvider()
       : super(CGSettings(
           enableAnalysis:

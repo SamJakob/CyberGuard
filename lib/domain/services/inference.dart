@@ -156,10 +156,14 @@ class InferenceAccountRef<T extends AccessMethod> {
 /// is inferred from the [InferenceGraph] and to store a human-readable name
 /// for the type.
 enum InferredAdviceType {
-  potentialBackdoor("Potential Backdoor");
+  potentialBackdoor(
+    "Potential Backdoor",
+    "A backdoor is when a more secure, or more important, account can be accessed by a less secure, or less important, account.",
+  );
 
   final String name;
-  const InferredAdviceType(this.name);
+  final String description;
+  const InferredAdviceType(this.name, this.description);
 }
 
 /// Encapsulates an inference message identified from [interpret]ing an
@@ -315,8 +319,12 @@ class InferenceService {
                       return "an answer to a security question (\"${accessMethodRef.read.label}\")";
                     }
 
-                    return "a "
-                        "${accessMethodRef.read.label ?? interfaceKey?.name ?? 'value'}";
+                    final String name = accessMethodRef.read.label != null &&
+                            accessMethodRef.read.label!.isNotEmpty
+                        ? accessMethodRef.read.label!
+                        : interfaceKey?.name ?? 'value';
+
+                    return "a $name";
                   }).toList()
                 );
 
@@ -445,8 +453,8 @@ class InferenceService {
         .map((final entry) => InferredAdvice(
               InferredAdviceType.potentialBackdoor,
               advice:
-                  "The account ${entry.$2.account.name} could allow an attacker "
-                  "to access ${entry.$3.account.name} because "
+                  "The account ${entry.$2.account.name} (less important) could allow an attacker "
+                  "to access ${entry.$3.account.name} (more important) because "
                   "${entry.$1!.humanReadableJoin}.",
               from: entry.$2.accountRef,
               to: entry.$3.accountRef,
@@ -586,11 +594,13 @@ class InferenceService {
     for (final multiFactorMethod in multiFactorMethods) {
       // Create a new access method conjunction for each of the other
       // (non-multi-factor) methods and the multi-factor method.
-      final conjunctions = otherMethods.map((final otherMethod) =>
-          EphemeralAccessMethodRef(AccessMethodConjunction({
-            multiFactorMethod,
-            otherMethod,
-          })));
+      final conjunctions =
+          otherMethods.map((final otherMethod) => EphemeralAccessMethodRef(
+                AccessMethodConjunction({
+                  multiFactorMethod.clone(),
+                  otherMethod.clone(),
+                }, accountsProvider: _accountsProvider),
+              ));
 
       // Replace the old methods with the new methods.
       accessMethods.remove(multiFactorMethod);

@@ -206,6 +206,16 @@ void main() {
 
   // BEGIN TESTS
 
+  test('does not error when an empty graph is inferred', () {
+    final InferenceService inferenceService = InferenceService(
+      accountsProvider: AccountsProvider(),
+      accountRefs: [],
+    );
+
+    final graph = inferenceService.run();
+    inferenceService.interpret(graph);
+  });
+
   // Initialize the inference service.
   InferenceService inferenceService = InferenceService(
     accountsProvider: accountsProvider,
@@ -384,6 +394,10 @@ void main() {
   group('graph interpretation', () {
     final inferredAdvice = inferenceService.interpret(graph);
 
+    test('should detect only two things with this setup', () {
+      expect(inferredAdvice.length, equals(2));
+    });
+
     test('detects the backdoor to Houston via Google', () {
       expect(
           inferredAdvice
@@ -394,7 +408,7 @@ void main() {
               .firstOrNull
               ?.advice,
           equals(
-            "The account Google could allow an attacker to access Apollo Software Houston because Google shares a password with Apollo Software Houston.",
+            "The account Google (less important) could allow an attacker to access Apollo Software Houston (more important) because Google shares a password with Apollo Software Houston.",
           ));
     });
 
@@ -408,7 +422,7 @@ void main() {
               .firstOrNull
               ?.advice,
           equals(
-            "The account Facebook could allow an attacker to access Amazon because Facebook shares an answer to a security question (\"What is your mother's maiden name?\") with Amazon.",
+            "The account Facebook (less important) could allow an attacker to access Amazon (more important) because Facebook shares an answer to a security question (\"What is your mother's maiden name?\") with Amazon.",
           ));
     });
   });

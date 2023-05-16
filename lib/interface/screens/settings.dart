@@ -1,8 +1,11 @@
 import 'package:cyberguard/const/branding.dart';
 import 'package:cyberguard/data/struct/platform_message.dart';
+import 'package:cyberguard/domain/providers/inference.dart';
 import 'package:cyberguard/domain/providers/settings.dart';
+import 'package:cyberguard/domain/services/inference.dart';
 import 'package:cyberguard/domain/services/settings_info.dart';
 import 'package:cyberguard/interface/components/typography.dart';
+import 'package:cyberguard/interface/utility/snackbars.dart';
 import 'package:cyberguard/interface/utility/url_launcher.dart';
 import 'package:cyberguard/locator.dart';
 import 'package:flutter/material.dart';
@@ -53,20 +56,24 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 onChanged: (final bool value) {
                   ref.read(settingsProvider.notifier).setEnableAnalysis(value);
+                  _triggerScan(context, ref);
                 },
                 value: settings.enableAnalysis,
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20)
-                      .copyWith(top: 10),
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    child: const Text("Manually Start Scan"),
+              if (settings.enableAnalysis)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20)
+                        .copyWith(top: 10),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _triggerScan(context, ref);
+                      },
+                      child: const Text("Manually Start Scan"),
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 20),
               const ListTile(
                 title: TitleText("Privacy Settings"),
@@ -331,6 +338,31 @@ class SettingsScreen extends ConsumerWidget {
     }
 
     return tiles;
+  }
+
+  void _triggerScan(final BuildContext context, final WidgetRef ref) {
+    if (!ref.read(settingsProvider).enableAnalysis) {
+      ref.read(inferenceProvider.notifier).setData(null);
+      return;
+    }
+
+    try {
+      // For now just run the inference service immediately.
+      // Later, the data could be snapshotted and passed to the
+      // inference service to run in an isolate.
+      final InferenceService inferenceService = locator.get<InferenceService>();
+      final graph = inferenceService.run();
+      final result = inferenceService.interpret(graph);
+
+      ref.read(inferenceProvider.notifier).setData(InferenceProviderData(
+            graph: graph,
+            advice: result,
+          ));
+
+      context.showInfoSnackbar(
+        message: "Scan complete. You can see the results on the home page.",
+      );
+    } catch (_) {}
   }
 }
 

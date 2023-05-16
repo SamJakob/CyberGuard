@@ -5,6 +5,7 @@ import 'package:clock/clock.dart';
 import 'package:cyberguard/data/struct/account.dart';
 import 'package:cyberguard/domain/providers/account.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:heroicons/heroicons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:messagepack/messagepack.dart';
 import 'package:meta/meta.dart';
@@ -149,6 +150,7 @@ class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
   /// property, and then return the result of the whole operation.
   bool _proxyAdd(final AccessMethodRef element) {
     if (element._owner != null) {
+      print(element._owner);
       throw DuplicateAccessMethodEntryStateError();
     }
 
@@ -324,31 +326,35 @@ class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
 }
 
 enum AccessMethodInterfaceKey {
+  /// A conjunction of accounts.
+  conjunction("Combination of Accounts", HeroIcon(HeroIcons.link)),
+
   /// Another account.
-  otherAccount("Other Account"),
+  otherAccount("Other Account", HeroIcon(HeroIcons.userCircle)),
 
   /// The user interface key for a recovery email address access method.
-  recoveryEmail("Recovery Email Address"),
+  recoveryEmail("Recovery Email Address", HeroIcon(HeroIcons.envelopeOpen)),
 
   /// The user interface key for a password access method.
-  password("Password, Passphrase or PIN"),
+  password("Password, Passphrase or PIN", HeroIcon(HeroIcons.key)),
 
   /// The user interface key for a TOTP access method.
-  totp("TOTP"),
+  totp("TOTP", HeroIcon(HeroIcons.clock)),
 
   /// The user interface key for an SMS-based access method.
-  sms("SMS"),
+  sms("SMS", HeroIcon(HeroIcons.chatBubbleLeftEllipsis)),
 
   /// The user interface key for a biometric access method.
-  biometric("Biometric"),
+  biometric("Biometric", HeroIcon(HeroIcons.fingerPrint)),
 
   /// The user interface key for a security question and answer pair
   /// access method.
-  securityQuestion("Security Question");
+  securityQuestion("Security Question", HeroIcon(HeroIcons.questionMarkCircle));
 
   final String label;
+  final Widget icon;
 
-  const AccessMethodInterfaceKey(this.label);
+  const AccessMethodInterfaceKey(this.label, this.icon);
 
   static AccessMethodInterfaceKey fromName(final String name) {
     return AccessMethodInterfaceKey.values
@@ -859,17 +865,36 @@ class AccessMethodConjunction extends AccessMethod {
   String get factoryName => typeName;
 
   @override
+  AccessMethodInterfaceKey get userInterfaceKey =>
+      AccessMethodInterfaceKey.conjunction;
+
+  @override
   AccessMethodTree get methods => super.methods!;
 
   AccessMethodConjunction(
     final Set<AccessMethodRef> methods, {
     super.userInterfaceKey,
+    final AccountsProvider? accountsProvider,
   }) : super(
           methods: methods,
-          label: methods
-              .map((final method) =>
-                  method.read.label ?? method.read.userInterfaceKey?.name)
-              .join(" & "),
+          label: methods.map((final method) {
+            // If the accountsProvider is specified, resolve the account name.
+            if (method.isAn<ExistingAccountAccessMethod>() &&
+                accountsProvider != null) {
+              return accountsProvider
+                      .get(method
+                          .readAs<ExistingAccountAccessMethod>()
+                          .accountId)
+                      ?.name ??
+                  "Unknown Account";
+            }
+
+            if (method.read.label != null && method.read.label!.isNotEmpty) {
+              return method.read.label!;
+            }
+
+            return method.read.userInterfaceKey?.label;
+          }).join(" and "),
         );
 
   AccessMethodConjunction.byUnpacking(

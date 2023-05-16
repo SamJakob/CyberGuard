@@ -1,11 +1,15 @@
+import 'dart:isolate';
+
 import 'package:cyberguard/const/branding.dart';
 import 'package:cyberguard/data/storage/aggregated_secure_data.dart';
 import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:cyberguard/data/struct/account.dart';
 import 'package:cyberguard/domain/error.dart';
 import 'package:cyberguard/domain/providers/account.dart';
+import 'package:cyberguard/domain/providers/inference.dart';
 import 'package:cyberguard/domain/providers/settings.dart';
 import 'package:cyberguard/domain/providers/user_presence.dart';
+import 'package:cyberguard/domain/services/inference.dart';
 import 'package:cyberguard/interface/screens/account.dart';
 import 'package:cyberguard/interface/screens/root.dart';
 import 'package:cyberguard/interface/screens/root/accounts.dart';
@@ -177,15 +181,42 @@ class CGApp extends StatelessWidget {
               );
             },
             interfaceBuilder: (final BuildContext context, final data) {
+              final initSettingsProvider = SettingsProvider();
+              final initAccountsProvider = AccountsProvider(
+                initialAccounts: data?.initialAccounts,
+              );
+
+              final initInferenceProvider = InferenceProvider();
+              final inferenceService = InferenceService(
+                accountsProvider: initAccountsProvider,
+                accountRefs: initAccountsProvider.allAccounts,
+              );
+
+              if (!locator.isRegistered<InferenceService>()) {
+                locator.registerSingleton<InferenceService>(inferenceService);
+              }
+
+              if (initSettingsProvider.appSettings.enableAnalysis) {
+                try {
+                  // For now just run the inference service immediately.
+                  // Later, the data could be snapshotted and passed to the
+                  // inference service to run in an isolate.
+                  final graph = inferenceService.run();
+                  final result = inferenceService.interpret(graph);
+                  initInferenceProvider.setData(InferenceProviderData(
+                    graph: graph,
+                    advice: result,
+                  ));
+                } catch (_) {}
+              }
+
               return ProviderScope(
                 overrides: [
                   settingsProvider.overrideWith(
-                    (final ref) => SettingsProvider(),
+                    (final ref) => initSettingsProvider,
                   ),
                   accountsProvider.overrideWith(
-                    (final ref) => AccountsProvider(
-                      initialAccounts: data?.initialAccounts,
-                    ),
+                    (final ref) => initAccountsProvider,
                   ),
                   accessMethodProvider.overrideWith(
                     (final ref) => AccessMethodStore(),
@@ -194,6 +225,9 @@ class CGApp extends StatelessWidget {
                     userPresenceProvider.overrideWith(
                       (final ref) => data!.userPresenceProvider,
                     ),
+                  inferenceProvider.overrideWith(
+                    (final ref) => initInferenceProvider,
+                  ),
                 ],
                 child: child!,
               );
