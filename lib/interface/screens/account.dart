@@ -212,10 +212,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     await _accessMethodRendererController.triggerSave();
 
     // Perform a scan.
-    ref.read(inferenceProvider.notifier).triggerScan(
-          ref,
-          context: mounted ? context : null,
-        );
+    ref.read(inferenceProvider.notifier).triggerScan(ref);
 
     disableValidation = false;
   }

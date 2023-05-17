@@ -167,7 +167,7 @@ class AddAccessMethodButton extends StatelessWidget {
           }
 
           if (context.mounted) {
-            showModalBottomSheet<void>(
+            await showModalBottomSheet<void>(
               context: context,
               builder: (final BuildContext context) {
                 return Column(

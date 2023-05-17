@@ -230,6 +230,8 @@ class _TotpScannerState extends State<TotpScanner> with WidgetsBindingObserver {
     setState(() {});
   }
 
+  bool _didPop = false;
+
   @override
   Widget build(final BuildContext context) {
     final bool hasFlashlight =
@@ -261,6 +263,8 @@ class _TotpScannerState extends State<TotpScanner> with WidgetsBindingObserver {
                 // Otherwise, pop with the TOTP URL.
                 final totp = TotpUrl.parse(value);
                 if (totp != null) {
+                  if (_didPop) return;
+                  _didPop = true;
                   locator.get<VibrationService>().vibrateEmphasis();
                   return context.pop(totp);
                 }
@@ -304,7 +308,7 @@ class _TotpScannerState extends State<TotpScanner> with WidgetsBindingObserver {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           if (locator.get<UiScalingService>().metrics.width >=
-                              400)
+                              500)
                             const CGAppWordmark(),
                           const Spacer(),
                           if (hasFlashlight && !_processing)
