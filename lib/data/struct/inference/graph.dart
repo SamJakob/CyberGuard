@@ -214,25 +214,44 @@ class Graph<T extends Vertex> {
   }) {
     // Move from the 'from' vertex to the 'to' vertex to its dependencies, and
     // record the journey taken to get there.
-    // Use a direct trail (in which all edges are distinct) to avoid cycles.
 
+    // Record the set of visited nodes (to avoid cycles).
     final Set<Vertex> visited = {};
+    // Use a queue to perform a breadth-first search of to's dependencies.
+    // We start at 'to' and move to 'from' because we want to find backdoors,
+    // not legitimate ways of authenticating.
     final Queue<(Vertex, List<Vertex>)> queue = Queue.from([
       (to, [to])
     ]);
 
+    // While there are nodes to search...
     while (queue.isNotEmpty) {
+      // Grab the first item from the queue.
       final current = queue.removeFirst();
 
+      // Check if it's the node we're looking for.
+      // If it is, we can assemble a string representation of the journey.
       if (current.$1 == from) {
+        // We found the backdoor from the reverse, but a malicious attacker
+        // would exploit this in the forward direction, so we need to reverse
+        // the path.
         final path = current.$2.reversed.toList();
 
+        // Store the string segments of the journey.
         final journey = <String>[];
 
+        // Now loop over every pair of vertices in the path (i.e., steps) and
+        // fetch (or generate) a comment for that part of the journey.
+        // We start at 1 because we need to look at the previous step to get
+        // the current step and the first step is a given because this is a
+        // hypothetical case where the attacker has gotten into the first
+        // account in the chain.
         for (int i = 1; i < path.length; i++) {
           final stepFrom = path[i - 1] as T;
           final stepTo = path[i] as T;
 
+          // If there's an edge comment in the graph, use it, otherwise if
+          // a generator has been specified use it.
           if (hasEdgeComment(from: stepFrom, to: stepTo)) {
             journey.add(getEdgeComment(from: stepFrom, to: stepTo)!);
           } else if (generateEdgeComment != null) {
@@ -243,12 +262,17 @@ class Graph<T extends Vertex> {
           }
         }
 
+        // Now return the assembled journey.
         return journey;
       }
 
+      // Otherwise, if the current node isn't one we've checked, add it to the
+      // visited set and add its dependencies to the queue to also be checked.
       if (!visited.contains(current.$1)) {
         visited.add(current.$1);
         queue.addAll(current.$1.dependencies
+            // Map each dependency into a record showing the dependency and the
+            // journey taken to get there so far.
             .map((final dependency) => (
                   dependency,
                   [...current.$2, dependency],
@@ -257,6 +281,7 @@ class Graph<T extends Vertex> {
       }
     }
 
+    // Otherwise, the 'from' vertex is not reachable from the 'to' vertex.
     return null;
   }
 
