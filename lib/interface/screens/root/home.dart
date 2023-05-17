@@ -1,5 +1,6 @@
 import 'package:cyberguard/const/branding.dart';
 import 'package:cyberguard/const/interface.dart';
+import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/domain/providers/inference.dart';
 import 'package:cyberguard/domain/providers/settings.dart';
@@ -76,35 +77,38 @@ class HomeScreen extends ConsumerWidget {
                         );
                         emphasis = "Analysis is disabled.";
                         advice =
-                            "You can enable it in the settings to get advice on how to improve your security.";
-                      }
-
-                      if (accounts.isEmpty) {
-                        icon = HeroIcon(
-                          HeroIcons.exclamationTriangle,
-                          size: 48,
-                          color: context.colorScheme.onPrimaryContainer,
-                        );
-                        emphasis = "You still have sections to complete!";
-                        advice = "Completing them will improve your score.";
-                      } else if (inferenceData != null) {
-                        if (inferenceData.advice.isEmpty) {
+                            "You can enable it in settings to get advice on how to improve your account setup.";
+                      } else {
+                        if (accounts.isEmpty ||
+                            AccessMethodStore().allAccessMethods.isEmpty) {
                           icon = HeroIcon(
-                            HeroIcons.shieldCheck,
+                            HeroIcons.exclamationTriangle,
                             size: 48,
                             color: context.colorScheme.onPrimaryContainer,
                           );
-                          emphasis = "Your accounts are in good standing!";
-                          advice = "No issues have been identified.";
-                        } else {
-                          icon = HeroIcon(
-                            HeroIcons.shieldExclamation,
-                            size: 48,
-                            color: context.colorScheme.onPrimaryContainer,
-                          );
-                          emphasis = "You have potential security issues!";
+                          emphasis =
+                              "You haven't added any accounts with access methods!";
                           advice =
-                              "$kAppName has identified ${inferenceData.advice.length} potential security issue${inferenceData.advice.length != 1 ? 's' : ''} with your account setup.";
+                              "Adding information will improve your score and allow $kAppName to provide you with tips for improving your security.";
+                        } else if (inferenceData != null) {
+                          if (inferenceData.advice.isEmpty) {
+                            icon = HeroIcon(
+                              HeroIcons.shieldCheck,
+                              size: 48,
+                              color: context.colorScheme.onPrimaryContainer,
+                            );
+                            emphasis = "Your accounts are in good standing!";
+                            advice = "No issues have been identified.";
+                          } else {
+                            icon = HeroIcon(
+                              HeroIcons.shieldExclamation,
+                              size: 48,
+                              color: context.colorScheme.onPrimaryContainer,
+                            );
+                            emphasis = "You have potential security issues!";
+                            advice =
+                                "$kAppName has identified ${inferenceData.advice.length} potential security issue${inferenceData.advice.length != 1 ? 's' : ''} with your account setup.";
+                          }
                         }
                       }
 
@@ -133,9 +137,13 @@ class HomeScreen extends ConsumerWidget {
                                             .colorScheme.onPrimaryContainer),
                                   ),
                                 ],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium!
+                                    .copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.2,
+                                    ),
                               ),
                             ),
                           )

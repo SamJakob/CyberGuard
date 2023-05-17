@@ -1,5 +1,3 @@
-import 'dart:isolate';
-
 import 'package:cyberguard/const/branding.dart';
 import 'package:cyberguard/data/storage/aggregated_secure_data.dart';
 import 'package:cyberguard/data/struct/access_method/access_method.dart';

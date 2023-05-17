@@ -112,38 +112,64 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   ) {
     if (accounts.isEmpty) {
       return [
-        const SliverFillRemaining(
+        SliverFillRemaining(
           hasScrollBody: false,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              HeroIcon(
-                HeroIcons.magnifyingGlassMinus,
-                size: 48,
-              ),
-              SizedBox(height: 12),
-              Text(
-                "No Accounts",
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const HeroIcon(
+                      HeroIcons.key,
+                      size: 48,
+                    ),
+                    Positioned(
+                      right: -8,
+                      bottom: -8,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.background,
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2),
+                          child:
+                              HeroIcon(HeroIcons.questionMarkCircle, size: 24),
+                        ),
+                      ),
+                    )
+                  ],
                 ),
-              ),
-              Text(
-                "You haven't added any accounts yet!",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 20),
+                Text(
+                  "No accounts.",
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onBackground
+                        .withOpacity(0.8),
+                  ),
                 ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                "Tap 'Add Account' in the bottom right to get started!",
-              ),
-            ],
+                Text(
+                  "You can add accounts by tapping 'Add Account' in the bottom right corner.",
+                  style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onBackground
+                        .withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
-        )
+        ),
       ];
     }
 

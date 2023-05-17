@@ -39,12 +39,89 @@ class ConnectionsScreen extends HookConsumerWidget {
 
     if (settings.enableAnalysis) {
       if (inferenceData?.graph != null) {
+        if (inferenceData!.graph.accounts.isEmpty) {
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const HeroIcon(
+                        HeroIcons.key,
+                        size: 48,
+                      ),
+                      Positioned(
+                        right: -8,
+                        bottom: -8,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.background,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2),
+                            child: HeroIcon(HeroIcons.questionMarkCircle,
+                                size: 24),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "No accounts.",
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onBackground
+                          .withOpacity(0.8),
+                    ),
+                  ),
+                  Text(
+                    "You can add accounts in the 'Accounts' tab.",
+                    style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onBackground
+                          .withOpacity(0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      context.go("/accounts");
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        HeroIcon(HeroIcons.arrowLongLeft),
+                        SizedBox(width: kSpaceUnitPx * 0.25),
+                        Text("Go to Accounts"),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         return SliverFillRemaining(
           hasScrollBody: false,
           child: Column(
             children: [
               const SizedBox(height: 40),
-              ...inferenceData!.graph.accounts
+              ...inferenceData.graph.accounts
                   .where((final node) => node.dependents.isNotEmpty)
                   .map((final node) {
                 return Padding(

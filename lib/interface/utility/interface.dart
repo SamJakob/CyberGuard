@@ -1,4 +1,3 @@
-import 'package:cyberguard/data/struct/account.dart';
 import 'package:flutter/material.dart';
 
 const List<Color> accentColors = [

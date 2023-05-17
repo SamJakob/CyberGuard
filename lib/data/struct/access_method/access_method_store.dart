@@ -277,7 +277,6 @@ class AccessMethodStore with ChangeNotifier {
       ));
     }
 
-    print(method);
     throw StateError(
       "Attempted to obtain a reference to an unregistered access method.",
     );

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cyberguard/const/interface.dart';
 import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:cyberguard/domain/providers/account.dart';
 import 'package:cyberguard/interface/pages/totp_scan.dart';
@@ -7,6 +8,7 @@ import 'package:cyberguard/interface/partials/root_app_bar.dart';
 import 'package:cyberguard/interface/partials/totp_tile.dart';
 import 'package:cyberguard/interface/utility/interface.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -89,10 +91,11 @@ class _MultiFactorScreenState extends ConsumerState<MultiFactorScreen>
         SliverFillRemaining(
           hasScrollBody: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.max,
               children: [
                 Stack(
                   clipBehavior: Clip.none,
@@ -102,15 +105,15 @@ class _MultiFactorScreenState extends ConsumerState<MultiFactorScreen>
                       size: 48,
                     ),
                     Positioned(
-                      right: -5,
-                      bottom: -5,
+                      right: -8,
+                      bottom: -8,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: context.colorScheme.background,
+                          color: Theme.of(context).colorScheme.background,
                           borderRadius: BorderRadius.circular(100),
                         ),
                         child: const Padding(
-                          padding: EdgeInsets.all(0),
+                          padding: EdgeInsets.all(2),
                           child:
                               HeroIcon(HeroIcons.questionMarkCircle, size: 24),
                         ),
@@ -118,27 +121,42 @@ class _MultiFactorScreenState extends ConsumerState<MultiFactorScreen>
                     )
                   ],
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  "You don't have any TOTP codes!",
+                const SizedBox(height: 20),
+                Text(
+                  "No TOTP Codes.",
                   style: TextStyle(
                     fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onBackground
+                        .withOpacity(0.8),
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const Text(
-                  "None of your accounts have TOTP (time-based two-factor authentication codes).",
+                Text(
+                  "You don't have any TOTP codes set up in your accounts. You can get started with TOTP by going to the 'Accounts' tab and adding TOTP to an account.",
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onBackground
+                        .withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Add a TOTP-based access method to one of your accounts in the Accounts tab to get started!",
-                  textAlign: TextAlign.center,
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    context.go("/accounts");
+                  },
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      HeroIcon(HeroIcons.arrowLongLeft),
+                      SizedBox(width: kSpaceUnitPx * 0.25),
+                      Text("Go to Accounts"),
+                    ],
+                  ),
                 ),
               ],
             ),
