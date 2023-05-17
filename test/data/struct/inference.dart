@@ -373,7 +373,7 @@ void main() {
                 edge.to.account == apolloSoftwareHoustonAccount)
             .first
             .comment,
-        equals("Apollo Software Houston shares a password with Google"),
+        equals("Google shares a password with Apollo Software Houston"),
       );
 
       expect(
@@ -386,7 +386,7 @@ void main() {
                 edge.to.account == googleAccount)
             .first
             .comment,
-        equals("Google shares a password with Apollo Software Houston"),
+        equals("Apollo Software Houston shares a password with Google"),
       );
     });
   });

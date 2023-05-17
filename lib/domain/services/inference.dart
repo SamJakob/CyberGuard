@@ -344,8 +344,8 @@ class InferenceService {
               // Otherwise generate the list of duplicates.
               return accountsWithMatchingValue.map(
                 (final matchEntry) => (
-                  entry.$1,
                   matchEntry.$1,
+                  entry.$1,
                   "${entry.$1.account.name} shares ${matchEntry.$2.humanReadableJoin} with "
                       "${matchEntry.$1.account.name}"
                 ),

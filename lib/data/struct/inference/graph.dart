@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:cyberguard/domain/services/inference.dart';
+
 /// A [Pair] is an ordered pair of two objects of the same type, [T]. It is
 /// used to represent a directed edge in a [Graph].
 class Pair<T> {
@@ -210,48 +212,51 @@ class Graph<T extends Vertex> {
     required final T to,
     final String? Function(T from, T to)? generateEdgeComment,
   }) {
-    Iterable<(T, List<String>)> expandVertexToRecords(
-      final T vertex, [
-      final List<String>? existingJourney,
-    ]) {
-      return vertex.dependencies.map((final Vertex dependency) {
-        final List<String> journey = existingJourney ?? [];
-        if (hasEdgeComment(from: vertex, to: dependency as T)) {
-          journey.add(getEdgeComment(from: vertex, to: dependency)!);
-        } else if (generateEdgeComment != null) {
-          final generatedComment = generateEdgeComment(vertex, dependency);
-          if (generatedComment != null) journey.add(generatedComment);
-        }
-        return (dependency, journey);
-      });
-    }
+    // Move from the 'from' vertex to the 'to' vertex to its dependencies, and
+    // record the journey taken to get there.
+    // Use a direct trail (in which all edges are distinct) to avoid cycles.
 
-    // Record the set of visited nodes.
     final Set<Vertex> visited = {};
-    // Use a queue to perform a breadth-first search of to's dependencies.
-    final Queue<(Vertex, List<String>)> queue =
-        Queue.from(expandVertexToRecords(to));
+    final Queue<(Vertex, List<Vertex>)> queue = Queue.from([
+      (to, [to])
+    ]);
 
-    // While there are nodes to search...
     while (queue.isNotEmpty) {
-      // Get the next node to check.
-      final (Vertex, List<String>) current = queue.removeFirst();
+      final current = queue.removeFirst();
 
-      // If the current node is 'from', then from must be reachable from to.
       if (current.$1 == from) {
-        return current.$2;
+        final path = current.$2.reversed.toList();
+
+        final journey = <String>[];
+
+        for (int i = 1; i < path.length; i++) {
+          final stepFrom = path[i - 1] as T;
+          final stepTo = path[i] as T;
+
+          if (hasEdgeComment(from: stepFrom, to: stepTo)) {
+            journey.add(getEdgeComment(from: stepFrom, to: stepTo)!);
+          } else if (generateEdgeComment != null) {
+            final comment = generateEdgeComment(stepFrom, stepTo);
+            if (comment != null) {
+              journey.add(comment);
+            }
+          }
+        }
+
+        return journey;
       }
 
-      // Otherwise, if the current node isn't one we've checked, add it to the
-      // visited set and add its dependencies to the queue.
       if (!visited.contains(current.$1)) {
         visited.add(current.$1);
-        queue.addAll(expandVertexToRecords(current.$1 as T, current.$2));
+        queue.addAll(current.$1.dependencies
+            .map((final dependency) => (
+                  dependency,
+                  [...current.$2, dependency],
+                ))
+            .toList());
       }
     }
 
-    // If we've exhausted the queue without finding 'from', then 'from' is not
-    // reachable from 'to'.
     return null;
   }
 

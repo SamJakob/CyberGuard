@@ -1,3 +1,4 @@
+import 'package:cyberguard/domain/providers/inference.dart';
 import 'package:cyberguard/interface/utility/url_launcher.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
@@ -209,6 +210,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     }
     await accountProvider.save();
     await _accessMethodRendererController.triggerSave();
+
+    // Perform a scan.
+    ref.read(inferenceProvider.notifier).triggerScan(
+          ref,
+          context: mounted ? context : null,
+        );
+
     disableValidation = false;
   }
 

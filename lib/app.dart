@@ -205,7 +205,10 @@ class CGApp extends StatelessWidget {
                     graph: graph,
                     advice: result,
                   ));
-                } catch (_) {}
+                } catch (ex, st) {
+                  print(ex);
+                  print(st);
+                }
               }
 
               return ProviderScope(
