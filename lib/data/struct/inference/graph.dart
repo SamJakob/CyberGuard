@@ -1,7 +1,5 @@
 import 'dart:collection';
 
-import 'package:cyberguard/domain/services/inference.dart';
-
 /// A [Pair] is an ordered pair of two objects of the same type, [T]. It is
 /// used to represent a directed edge in a [Graph].
 class Pair<T> {
