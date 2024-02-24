@@ -20,7 +20,7 @@ class RootAppBar extends StatefulWidget {
   final bool hideAppBadge;
 
   RootAppBar({
-    final Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     this.collapsedHeight = 64,
@@ -36,8 +36,7 @@ class RootAppBar extends StatefulWidget {
         expandedHeight = forceShrink
             ? collapsedHeight
             : expandedHeight +
-                (bottomWidget != null ? bottomWidgetSize ?? 0 : 0),
-        super(key: key);
+                (bottomWidget != null ? bottomWidgetSize ?? 0 : 0);
 
   @override
   State<RootAppBar> createState() => _RootAppBarState();

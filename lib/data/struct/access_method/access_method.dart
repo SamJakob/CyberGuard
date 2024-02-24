@@ -219,15 +219,15 @@ class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
   }
 
   void removeAll(final Iterable<Object?> elements) {
-    for (Object? element in elements) {
+    for (final Object? element in elements) {
       remove(element);
     }
   }
 
   void removeWhere(final bool Function(AccessMethodRef element) test) {
-    List<Object?> toRemove = [];
+    final List<Object?> toRemove = [];
 
-    for (AccessMethodRef element in this) {
+    for (final AccessMethodRef element in this) {
       if (test(element)) toRemove.add(element);
     }
 
@@ -236,9 +236,9 @@ class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
 
   List<AccessMethodRef> recursiveWhere(
       final bool Function(AccessMethodRef methodRef) test) {
-    Set<AccessMethodRef> results = {};
+    final Set<AccessMethodRef> results = {};
 
-    for (AccessMethodRef element in this) {
+    for (final AccessMethodRef element in this) {
       if (test(element)) results.add(element);
 
       if (element.read.methods != null && element.read.methods!.isNotEmpty) {
@@ -264,7 +264,7 @@ class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
     if (isNotEmpty) {
       childStr = "\t";
 
-      for (AccessMethodRef methodRef in this) {
+      for (final AccessMethodRef methodRef in this) {
         final method = methodRef.read;
         childStr += "$method${method != last.read ? '\n' : ''}";
       }
@@ -275,9 +275,7 @@ class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
 
   /// Pack the tree into binary data.
   Uint8List pack() {
-    final messagePacker = Packer();
-
-    messagePacker.packListLength(length);
+    final messagePacker = Packer()..packListLength(length);
     for (final method in this) {
       messagePacker.packBinary(method.pack());
     }
@@ -290,9 +288,9 @@ class AccessMethodTree with ChangeNotifier, Iterable<AccessMethodRef> {
     final messageUnpacker = Unpacker(data);
     final tree = AccessMethodTree.empty();
 
-    int length = messageUnpacker.unpackListLength();
+    final int length = messageUnpacker.unpackListLength();
 
-    Set<AccessMethodRef> methods = {};
+    final Set<AccessMethodRef> methods = {};
     for (int i = 0; i < length; i++) {
       methods.add(AccessMethodRef.unpack(Uint8List.fromList(
         messageUnpacker.unpackBinary(),
@@ -406,7 +404,7 @@ abstract class AccessMethod {
     if (hasAccessMethods) {
       childStr = "\n";
 
-      for (var method in methods!) {
+      for (final method in methods!) {
         childStr +=
             "\t${method.toString().replaceAll("\n", "\n\t")}${method != methods!.last ? '\n' : ''}";
       }
@@ -447,11 +445,11 @@ abstract class AccessMethod {
   /// pack additional data.
   @mustCallSuper
   Uint8List pack({final AccessMethodAdditionalFieldsPacker? additionalFields}) {
-    final messagePacker = Packer();
+    final messagePacker = Packer()
 
-    // Write the factory type name.
-    // (or if it's a direct instantiation of this class, write AccessMethod)
-    messagePacker.packString(factoryName);
+      // Write the factory type name.
+      // (or if it's a direct instantiation of this class, write AccessMethod)
+      ..packString(factoryName);
 
     // If there are additional fields, pack them.
     if (additionalFields != null) {
@@ -495,7 +493,7 @@ abstract class AccessMethod {
     final AccessMethodTree? owner,
   }) {
     final messageUnpacker = Unpacker(data);
-    String factoryName = messageUnpacker.unpackString()!;
+    final String factoryName = messageUnpacker.unpackString()!;
 
     return AccessMethodRegistry.getUnpacker(factoryName)(
       messageUnpacker,
@@ -534,26 +532,20 @@ class ExistingAccountAccessMethod extends AccessMethod {
   });
 
   ExistingAccountAccessMethod.byUnpacking(
-    final Unpacker messageUnpacker, {
-    final AccessMethodTree? owner,
+    super.messageUnpacker, {
+    super.owner,
   })  : accountId = messageUnpacker.unpackString()!,
-        super.byUnpacking(messageUnpacker, owner: owner);
+        super.byUnpacking();
 
   ExistingAccountAccessMethod._forClone(
     this.accountId, {
     // Superclass parameters.
-    final String? label,
-    final AccessMethodInterfaceKey? userInterfaceKey,
-    final String? extra,
-    required final DateTime added,
-    final AccessMethodTree? methods,
-  }) : super._forClone(
-          label: label,
-          userInterfaceKey: userInterfaceKey,
-          extra: extra,
-          added: added,
-          methods: methods,
-        );
+    super.label,
+    super.userInterfaceKey,
+    super.extra,
+    required super.added,
+    super.methods,
+  }) : super._forClone();
 
   @override
   ExistingAccountAccessMethod clone({final bool keepPriority = false}) {
@@ -600,26 +592,19 @@ class RecoveryEmailAccessMethod extends ExistingAccountAccessMethod {
   });
 
   RecoveryEmailAccessMethod.byUnpacking(
-    final Unpacker messageUnpacker, {
-    final AccessMethodTree? owner,
-  }) : super.byUnpacking(messageUnpacker, owner: owner);
+    super.messageUnpacker, {
+    super.owner,
+  }) : super.byUnpacking();
 
   RecoveryEmailAccessMethod._forClone(
-    final String accountId, {
+    super.accountId, {
     // Superclass parameters.
-    final String? label,
-    final AccessMethodInterfaceKey? userInterfaceKey,
-    final String? extra,
-    required final DateTime added,
-    final AccessMethodTree? methods,
-  }) : super._forClone(
-          accountId,
-          label: label,
-          userInterfaceKey: userInterfaceKey,
-          extra: extra,
-          added: added,
-          methods: methods,
-        );
+    super.label,
+    super.userInterfaceKey,
+    super.extra,
+    required super.added,
+    super.methods,
+  }) : super._forClone();
 
   @override
   RecoveryEmailAccessMethod clone({final bool keepPriority = false}) {
@@ -664,26 +649,20 @@ class KnowledgeAccessMethod extends AccessMethod {
   });
 
   KnowledgeAccessMethod.byUnpacking(
-    final Unpacker messageUnpacker, {
-    final AccessMethodTree? owner,
+    super.messageUnpacker, {
+    super.owner,
   })  : data = messageUnpacker.unpackString()!,
-        super.byUnpacking(messageUnpacker, owner: owner);
+        super.byUnpacking();
 
   KnowledgeAccessMethod._forClone(
     this.data, {
     // Superclass parameters.
-    final String? label,
-    final AccessMethodInterfaceKey? userInterfaceKey,
-    final String? extra,
-    required final DateTime added,
-    final AccessMethodTree? methods,
-  }) : super._forClone(
-          label: label,
-          userInterfaceKey: userInterfaceKey,
-          extra: extra,
-          added: added,
-          methods: methods,
-        );
+    super.label,
+    super.userInterfaceKey,
+    super.extra,
+    required super.added,
+    super.methods,
+  }) : super._forClone();
 
   @override
   KnowledgeAccessMethod clone({final bool keepPriority = false}) {
@@ -723,24 +702,18 @@ class PhysicalAccessMethod extends AccessMethod {
   });
 
   PhysicalAccessMethod.byUnpacking(
-    final Unpacker messageUnpacker, {
-    final AccessMethodTree? owner,
-  }) : super.byUnpacking(messageUnpacker, owner: owner);
+    super.messageUnpacker, {
+    super.owner,
+  }) : super.byUnpacking();
 
   PhysicalAccessMethod._forClone({
     // Superclass parameters.
-    final String? label,
-    final AccessMethodInterfaceKey? userInterfaceKey,
-    final String? extra,
-    required final DateTime added,
-    final AccessMethodTree? methods,
-  }) : super._forClone(
-          label: label,
-          userInterfaceKey: userInterfaceKey,
-          extra: extra,
-          added: added,
-          methods: methods,
-        );
+    super.label,
+    super.userInterfaceKey,
+    super.extra,
+    required super.added,
+    super.methods,
+  }) : super._forClone();
 
   @override
   PhysicalAccessMethod clone({final bool keepPriority = false}) {
@@ -773,24 +746,18 @@ class BiometricAccessMethod extends AccessMethod {
   });
 
   BiometricAccessMethod.byUnpacking(
-    final Unpacker messageUnpacker, {
-    final AccessMethodTree? owner,
-  }) : super.byUnpacking(messageUnpacker, owner: owner);
+    super.messageUnpacker, {
+    super.owner,
+  }) : super.byUnpacking();
 
   BiometricAccessMethod._forClone({
     // Superclass parameters.
-    final String? label,
-    final AccessMethodInterfaceKey? userInterfaceKey,
-    final String? extra,
-    required final DateTime added,
-    final AccessMethodTree? methods,
-  }) : super._forClone(
-          label: label,
-          userInterfaceKey: userInterfaceKey,
-          extra: extra,
-          added: added,
-          methods: methods,
-        );
+    super.label,
+    super.userInterfaceKey,
+    super.extra,
+    required super.added,
+    super.methods,
+  }) : super._forClone();
 
   @override
   BiometricAccessMethod clone({final bool keepPriority = false}) {
@@ -822,24 +789,18 @@ class TemporalAccessMethod extends AccessMethod {
   });
 
   TemporalAccessMethod.byUnpacking(
-    final Unpacker messageUnpacker, {
-    final AccessMethodTree? owner,
-  }) : super.byUnpacking(messageUnpacker, owner: owner);
+    super.messageUnpacker, {
+    super.owner,
+  }) : super.byUnpacking();
 
   TemporalAccessMethod._forClone({
     // Superclass parameters.
-    final String? label,
-    final AccessMethodInterfaceKey? userInterfaceKey,
-    final String? extra,
-    required final DateTime added,
-    final AccessMethodTree? methods,
-  }) : super._forClone(
-          label: label,
-          userInterfaceKey: userInterfaceKey,
-          extra: extra,
-          added: added,
-          methods: methods,
-        );
+    super.label,
+    super.userInterfaceKey,
+    super.extra,
+    required super.added,
+    super.methods,
+  }) : super._forClone();
 
   @override
   TemporalAccessMethod clone({final bool keepPriority = false}) {
@@ -897,24 +858,18 @@ class AccessMethodConjunction extends AccessMethod {
         );
 
   AccessMethodConjunction.byUnpacking(
-    final Unpacker messageUnpacker, {
-    final AccessMethodTree? owner,
-  }) : super.byUnpacking(messageUnpacker, owner: owner);
+    super.messageUnpacker, {
+    super.owner,
+  }) : super.byUnpacking();
 
   AccessMethodConjunction._forClone({
     // Superclass parameters.
-    final String? label,
-    final AccessMethodInterfaceKey? userInterfaceKey,
-    final String? extra,
-    required final DateTime added,
-    final AccessMethodTree? methods,
-  }) : super._forClone(
-          label: label,
-          userInterfaceKey: userInterfaceKey,
-          extra: extra,
-          added: added,
-          methods: methods,
-        );
+    super.label,
+    super.userInterfaceKey,
+    super.extra,
+    required super.added,
+    super.methods,
+  }) : super._forClone();
 
   @override
   AccessMethodConjunction clone({final bool keepPriority = false}) {

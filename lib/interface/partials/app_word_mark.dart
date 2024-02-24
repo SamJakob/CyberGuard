@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 
 class CGAppWordmark extends StatelessWidget {
   const CGAppWordmark({
-    final Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(final BuildContext context) {

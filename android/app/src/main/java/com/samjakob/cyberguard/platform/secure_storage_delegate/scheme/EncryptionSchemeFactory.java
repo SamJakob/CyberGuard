@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.samjakob.cyberguard.BuildConfig;
+import com.samjakob.cyberguard.R;
 import com.samjakob.cyberguard.errors.SecureStorageDelegateError;
 
 import java.security.KeyStore;
@@ -166,7 +166,7 @@ public class EncryptionSchemeFactory {
 
                 return new EncryptionSchemeChoice(message, schemeOption.scheme.newInstance());
             } catch (Exception ex) {
-                if (BuildConfig.DEBUG) ex.printStackTrace();
+                if (context.getResources().getBoolean(R.bool.kDebugMode)) ex.printStackTrace();
                 throw new SecureStorageDelegateError("Failed to prepare encryption scheme.");
             }
         }

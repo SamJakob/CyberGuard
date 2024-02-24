@@ -10,11 +10,11 @@ class AddAccessMethodPage extends StatefulWidget {
   final String? existingData;
 
   const AddAccessMethodPage({
-    final Key? key,
+    super.key,
     required this.interfaceKey,
     required this.account,
     this.existingData,
-  }) : super(key: key);
+  });
 
   @override
   State<AddAccessMethodPage> createState() => _AddAccessMethodPageState();
@@ -35,11 +35,8 @@ class _AddAccessMethodPageState extends State<AddAccessMethodPage> {
 
   @override
   Widget build(final BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_isLoading) return false;
-        return true;
-      },
+    return PopScope(
+      canPop: !_isLoading,
       child: SafeArea(
         top: false,
         bottom: true,

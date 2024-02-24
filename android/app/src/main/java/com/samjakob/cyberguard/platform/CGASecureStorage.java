@@ -12,8 +12,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.biometric.BiometricManager;
 
-import com.samjakob.cyberguard.BuildConfig;
 import com.samjakob.cyberguard.MainActivity;
+import com.samjakob.cyberguard.R;
 import com.samjakob.cyberguard.errors.MissingSecureStorageDelegateError;
 import com.samjakob.cyberguard.errors.SecureStorageDelegateError;
 import com.samjakob.cyberguard.platform.secure_storage_delegate.EnhancedSecureStorageDelegate;
@@ -115,7 +115,7 @@ public class CGASecureStorage {
                 }
             }
         } catch (Exception ex) {
-            if (BuildConfig.DEBUG) ex.printStackTrace();
+            if (context.getResources().getBoolean(R.bool.kDebugMode)) ex.printStackTrace();
         }
 
         // If the device has enhanced security and a registered delegate, indicate that
@@ -259,7 +259,7 @@ public class CGASecureStorage {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             hasTEE |= context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_HARDWARE_KEYSTORE, 0);
-        }
+        } f
 
         // Assuming there is a trusted execution environment, we'll then check if there
         // are biometrics enrolled to protect the key.

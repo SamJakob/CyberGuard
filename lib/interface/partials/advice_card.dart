@@ -9,9 +9,9 @@ class AdviceCard extends StatelessWidget {
   final InferredAdvice advice;
 
   const AdviceCard({
-    final Key? key,
+    super.key,
     required this.advice,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(final BuildContext context) {

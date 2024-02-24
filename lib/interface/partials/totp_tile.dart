@@ -20,21 +20,21 @@ class TotpTile extends HookWidget {
   final Account? account;
 
   const TotpTile({
-    final Key? key,
+    super.key,
     required this.totp,
     this.account,
-  }) : super(key: key);
+  });
 
   String _computeValue() {
     // Generate TOTP (time-based) counter. Number of seconds since epoch
     // divided by validity period.
-    int counter =
+    final int counter =
         ((DateTime.now().millisecondsSinceEpoch / 1000) / totp.validityPeriod)
             .floor();
 
     // Generate HMAC-digest of the counter using the secret key.
     final counterByteData = ByteData(8)..setUint64(0, counter);
-    List<int> counterBytes = counterByteData.buffer.asUint8List(0, 8);
+    final List<int> counterBytes = counterByteData.buffer.asUint8List(0, 8);
 
     // Compute the digest using HMAC.
     final digest = Hmac(totp.digest.algorithm, base32.decode(totp.secret))
@@ -60,7 +60,7 @@ class TotpTile extends HookWidget {
         0x7FFFFFFF; // Ensure MSB is masked off.
 
     // Convert to a string by converting the number to decimal and padding it.
-    String code = (truncatedDigestBytes % pow(10, totp.digits.value))
+    final String code = (truncatedDigestBytes % pow(10, totp.digits.value))
         .toString()
         .padLeft(totp.digits.value, '0');
 

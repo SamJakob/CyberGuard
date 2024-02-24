@@ -166,7 +166,7 @@ enum InferredAdviceType {
   const InferredAdviceType(this.name, this.description);
 }
 
-/// Encapsulates an inference message identified from [interpret]ing an
+/// Encapsulates an inference message identified from `interpret`ing an
 /// [InferenceGraph].
 class InferredAdvice {
   final InferredAdviceType type;
@@ -289,7 +289,8 @@ class InferenceService {
 
               // Get the set of accounts that have a KnowledgeAccessMethod with a
               // matching value and a list of messages describing the link.
-              List<(AccountRef, List<String>)> accountsWithMatchingValue = [];
+              final List<(AccountRef, List<String>)> accountsWithMatchingValue =
+                  [];
               for (final accountRef in _accountRefs) {
                 // Naturally, skip the current account.
                 if (accountRef == entry.$1) continue;
@@ -356,7 +357,7 @@ class InferenceService {
             .toList();
 
     // Add the inferred duplicate knowledge methods to the graph.
-    for (var entry in duplicateKnowledgeMethods) {
+    for (final entry in duplicateKnowledgeMethods) {
       // Add an edge from the first account to the second account.
       graph.addEdge(
         from: InferenceGraphNode.forAccount(entry.$2, owner: graph),
@@ -371,7 +372,7 @@ class InferenceService {
         manuallyAddedMethods = {
       // For each accountRef, map the accountRef to the set of access methods
       // that have been assigned to the account.
-      for (var entry in _preprocess().map(
+      for (final entry in _preprocess().map(
         (final inferenceRef) => MapEntry(
           inferenceRef,
           inferenceRef.preprocessedTree ??
@@ -467,7 +468,7 @@ class InferenceService {
   /// Gets a list of tuples of accounts and the set of access methods where the
   /// method is of type [T]. Optionally, a [where] function can provide
   /// additional filtering of the access methods.
-  /// Additionally, [unwrap] can be used to unwrap the access method reference
+  /// Additionally, `unwrap` can be used to unwrap the access method reference
   /// into a value of type [U].
   List<(AccountRef, Set<U>)> _getMethodsOfType<T extends AccessMethod, U>({
     final bool Function(AccessMethodRef ref)? where,
@@ -522,7 +523,7 @@ class InferenceService {
     if (depth > 3) return;
 
     // Otherwise walk the access method recursively.
-    List<AccessMethodRef> pendingRefs = [];
+    final List<AccessMethodRef> pendingRefs = [];
     for (final dependencyAccessMethod in accessMethodRef.read.methods!) {
       graph.addEdge(
         from: InferenceGraphNode.forAccessMethod(
@@ -551,7 +552,7 @@ class InferenceService {
   /// Preprocesses the accounts to be inferred. This method, for example, will
   /// convert 2FA accounts into a conjunction of accounts and access methods.
   Set<InferenceAccountRef> _preprocess() {
-    Set<InferenceAccountRef> inferenceAccountRefs = {};
+    final Set<InferenceAccountRef> inferenceAccountRefs = {};
 
     for (final account in _accountRefs) {
       if (account.account.accessMethods.isNotEmpty) {
@@ -575,7 +576,7 @@ class InferenceService {
 
     // Identify the set of access methods that are multi-factor measures for
     // any of the other measures.
-    Set<AccessMethodRef> multiFactorMethods = accessMethods
+    final Set<AccessMethodRef> multiFactorMethods = accessMethods
         .where(
           (final element) => [
             AccessMethodInterfaceKey.totp,
@@ -603,13 +604,14 @@ class InferenceService {
               ));
 
       // Replace the old methods with the new methods.
-      accessMethods.remove(multiFactorMethod);
-      accessMethods.removeAll(otherMethods);
-      accessMethods.addAll(conjunctions);
+      accessMethods
+        ..remove(multiFactorMethod)
+        ..removeAll(otherMethods)
+        ..addAll(conjunctions);
     }
 
     // For now we only process one layer deep.
-    // TODO: Process more than one layer deep.
+    // TODO(samjakob): Process more than one layer deep.
     return accessMethods;
   }
 }

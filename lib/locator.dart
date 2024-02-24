@@ -12,13 +12,14 @@ final GetIt locator = GetIt.instance;
 /// initialize.
 Future<void> setupLocatorEarly() async {
   // Register shared preferences.
-  locator.registerSingleton(await SharedPreferences.getInstance());
+  locator
+    ..registerSingleton(await SharedPreferences.getInstance())
 
-  // Register UI utility services.
-  locator.registerSingleton(UiScalingService.register());
+    // Register UI utility services.
+    ..registerSingleton(UiScalingService.register())
 
-  // Register haptic feedback service.
-  locator.registerSingleton(await VibrationService.initialize());
+    // Register haptic feedback service.
+    ..registerSingleton(await VibrationService.initialize());
 }
 
 /// Register services and providers after the app starts, but whilst the app is

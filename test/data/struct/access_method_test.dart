@@ -25,7 +25,7 @@ void main() {
 
     test("access method sub classes instantiate correctly", () {
       withClock(Clock.fixed(executionInstant), () {
-        var methodRef = AccessMethodStore().register(
+        final methodRef = AccessMethodStore().register(
           KnowledgeAccessMethod('mypassword', label: 'Password'),
         );
 
@@ -34,7 +34,7 @@ void main() {
         expect(methodRef.read.added, equals(executionInstant));
         expect(methodRef.read.data, equals('mypassword'));
 
-        var methodRef2 = AccessMethodStore()
+        final methodRef2 = AccessMethodStore()
             .register(KnowledgeAccessMethod('mypassword', label: 'Password 2'));
         expect(methodRef2.priority, equals(-1));
         expect(methodRef2.read.label, equals('Password 2'));
@@ -56,7 +56,7 @@ void main() {
           );
         });
 
-        var methodWithSubMethods = AccessMethodStore().register(
+        final methodWithSubMethods = AccessMethodStore().register(
           PhysicalAccessMethod(
             label: 'Cell Phone',
             methods: {
@@ -88,7 +88,7 @@ void main() {
       AccessMethodRef<PhysicalAccessMethod> cellPhone;
       AccessMethodRef<KnowledgeAccessMethod> cellPhonePin;
 
-      var googleAccountRequirements = AccessMethodTree({
+      final googleAccountRequirements = AccessMethodTree({
         conjunction = AccessMethodStore().register(AccessMethodConjunction({
           password = AccessMethodStore().register(
             KnowledgeAccessMethod('mypassword', label: 'Password'),
@@ -120,7 +120,7 @@ void main() {
       // Now define a new access method, add it to the existing
       // structure, and ensure everything is still valid.
       AccessMethodRef<KnowledgeAccessMethod> securityKeyPin;
-      AccessMethodRef<PhysicalAccessMethod> securityKey =
+      final AccessMethodRef<PhysicalAccessMethod> securityKey =
           AccessMethodStore().register(
         PhysicalAccessMethod(
           label: 'Security Key',
@@ -386,13 +386,13 @@ void main() {
     });
 
     test('test deserializes without error', () {
-      Uint8List data = googleAccountRequirements.pack();
+      final Uint8List data = googleAccountRequirements.pack();
       expect(AccessMethodTree.unpack(data)!, isA<AccessMethodTree>());
     });
 
     test('representation matches before and after re-serialization', () {
-      Uint8List data = googleAccountRequirements.pack();
-      AccessMethodTree deserialized = AccessMethodTree.unpack(data)!;
+      final Uint8List data = googleAccountRequirements.pack();
+      final AccessMethodTree deserialized = AccessMethodTree.unpack(data)!;
 
       // toString provides an adequate summary of the structure, so
       // simply comparing these ensures that all of the pertinent

@@ -16,7 +16,7 @@ class AccessMethodSerializationService
     if (data == null) return null;
 
     final messageUnpacker = Unpacker(data);
-    int length = messageUnpacker.unpackMapLength();
+    final int length = messageUnpacker.unpackMapLength();
 
     final result = instantiate();
     for (int i = 0; i < length; i++) {
@@ -33,11 +33,11 @@ class AccessMethodSerializationService
     // Don't bother encrypting/serializing if there's no data.
     if (data == null || data.isEmpty) return null;
 
-    final messagePacker = Packer();
-    messagePacker.packMapLength(data.length);
+    final messagePacker = Packer()..packMapLength(data.length);
     data.forEach((final key, final value) {
-      messagePacker.packString(key);
-      messagePacker.packBinary(value.pack());
+      messagePacker
+        ..packString(key)
+        ..packBinary(value.pack());
     });
     return messagePacker.takeBytes();
   }

@@ -13,7 +13,7 @@ import 'package:heroicons/heroicons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class MultiFactorScreen extends StatefulHookConsumerWidget {
-  const MultiFactorScreen({final Key? key}) : super(key: key);
+  const MultiFactorScreen({super.key});
 
   @override
   ConsumerState<MultiFactorScreen> createState() => _MultiFactorScreenState();

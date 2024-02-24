@@ -20,9 +20,9 @@ class AddAccountForm extends ConsumerStatefulWidget {
   final bool disableValidation;
 
   const AddAccountForm({
-    final Key? key,
+    super.key,
     this.disableValidation = false,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AddAccountForm> createState() => AddAccountFormState();

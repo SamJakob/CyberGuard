@@ -14,9 +14,9 @@ class AddAccountPage extends ConsumerStatefulWidget {
   final BuildContext? parentContext;
 
   const AddAccountPage({
-    final Key? key,
+    super.key,
     this.parentContext,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AddAccountPage> createState() => _AddAccountPageState();
@@ -86,11 +86,8 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
 
   @override
   Widget build(final BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_isLoading) return false;
-        return true;
-      },
+    return PopScope(
+      canPop: !_isLoading,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
@@ -189,9 +186,9 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
                                   );
                             }
 
-                            if (mounted) {
+                            if (context.mounted) {
                               context.pop();
-                              context.push("/accounts/$id");
+                              await context.push("/accounts/$id");
                             }
                           } else {
                             // Otherwise, scroll to the start of the form.
@@ -242,9 +239,9 @@ class _AddAccountPageState extends ConsumerState<AddAccountPage> {
                                   );
                             }
 
-                            if (mounted) {
+                            if (context.mounted) {
                               context.pop();
-                              context.push("/accounts/$id");
+                              await context.push("/accounts/$id");
                             }
                           } else {
                             // Otherwise, scroll to the start of the form.

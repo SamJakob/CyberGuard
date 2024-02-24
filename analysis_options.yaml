@@ -10,30 +10,57 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
-  strong-mode:
   language:
+    strict-casts: true
     strict-inference: true
     strict-raw-types: true
-    strict-casts: true
+  errors:
+    invalid_use_of_protected_member: error
+    invalid_override_of_non_virtual_member: error
+    invalid_annotation_target: ignore # detection is often flawed or incorrect.
+  plugins:
+    - custom_lint
+  exclude:
+    # Exclude generated files from analysis
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.chopper.dart"
 
 linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at
-  # https://dart-lang.github.io/linter/lints/index.html.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
   rules:
+    avoid_dynamic_calls: true
     avoid_print: true
     avoid_relative_lib_imports: true
+    avoid_type_to_string: true
+    cancel_subscriptions: true
+    cascade_invocations: true
+    close_sinks: true
+    comment_references: true
+    dangling_library_doc_comments: true
+    deprecated_member_use_from_same_package: true
+    flutter_style_todos: true
+    join_return_with_assignment: true
+    literal_only_boolean_expressions: true
+    no_self_assignments: true
     prefer_relative_imports: false
     prefer_final_parameters: true
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    prefer_final_in_for_each: true
+    prefer_final_locals: true
+    unnecessary_await_in_return: true
+    unnecessary_statements: true
+    use_super_parameters: true
+
+    # Potentially unnecessary or confusing (the 'unawaited' concept is not necessarily well known to other developers
+    # or to all Dart developers) and the semantics of unawaited are not always clear.
+    #
+    # That said, this is a useful rule to have enabled, so we can catch cases where we do want to await a future and
+    # so that there is an explicit decision to not await a future.
+    unawaited_futures: true
+
+    # Dart 3.0 prevents fall-through of non-empty switch cases.
+    # Dart 2.19 and lower require explicit breaks (and this rule is not enforced for those versions).
+    unnecessary_breaks: true
+
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

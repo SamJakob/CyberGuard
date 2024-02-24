@@ -9,7 +9,7 @@ import 'package:heroicons/heroicons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class AccountsScreen extends ConsumerStatefulWidget {
-  const AccountsScreen({final Key? key}) : super(key: key);
+  const AccountsScreen({super.key});
 
   @override
   ConsumerState<AccountsScreen> createState() => _AccountsScreenState();

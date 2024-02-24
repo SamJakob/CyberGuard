@@ -19,7 +19,7 @@ class ApolloPageRoute<T> extends PageRouteBuilder<T> {
 
   ApolloPageRoute({
     required final WidgetBuilder builder,
-    final RouteSettings? settings,
+    super.settings,
     this.isFullscreenDialog,
     this.isOpaque = true,
   }) : super(
@@ -27,7 +27,6 @@ class ApolloPageRoute<T> extends PageRouteBuilder<T> {
                   final Animation<double> animation,
                   final Animation<double> secondaryAnimation) =>
               builder(context),
-          settings: settings,
           transitionDuration: const Duration(milliseconds: 200),
           opaque: isOpaque,
         );

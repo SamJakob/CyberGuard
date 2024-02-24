@@ -319,7 +319,7 @@ class Graph<T extends Vertex> {
     required final T to,
     required final String comment,
   }) {
-    for (var vertex in from) {
+    for (final vertex in from) {
       setEdgeComment(from: vertex, to: to, comment: comment);
     }
   }
@@ -328,7 +328,7 @@ class Graph<T extends Vertex> {
     required final Set<T> from,
     required final T to,
   }) {
-    for (var vertex in from) {
+    for (final vertex in from) {
       deleteEdgeComment(from: vertex, to: to);
     }
   }
@@ -401,10 +401,10 @@ class Graph<T extends Vertex> {
 
   @override
   String toString() {
-    List<String> resultLines = [];
+    final List<String> resultLines = [];
     for (final entry in _mapping.entries) {
       for (final source in entry.value) {
-        String comment = hasEdgeComment(from: source, to: entry.key)
+        final String comment = hasEdgeComment(from: source, to: entry.key)
             ? " (COMMENT: ${getEdgeComment(from: source, to: entry.key)})"
             : "";
         resultLines.add('$source -> ${entry.key}$comment');

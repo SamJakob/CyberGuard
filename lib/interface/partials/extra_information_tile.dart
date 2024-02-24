@@ -35,7 +35,7 @@ class ExtraInformationTile<T> extends StatefulWidget {
   final T? min;
 
   const ExtraInformationTile({
-    final Key? key,
+    super.key,
     required this.isEditing,
     required this.title,
     required this.description,
@@ -47,7 +47,7 @@ class ExtraInformationTile<T> extends StatefulWidget {
     this.colorIfFalse,
     this.max,
     this.min,
-  }) : super(key: key);
+  });
 
   @override
   State<ExtraInformationTile<T>> createState() => _ExtraInformationTileState();

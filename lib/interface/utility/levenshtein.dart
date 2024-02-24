@@ -26,8 +26,8 @@ extension StringLevenshtein on String {
     final otherWords = otherString.split(' ');
 
     double perWordAverage = 1;
-    for (String word in thisWords) {
-      for (String otherWord in otherWords) {
+    for (final String word in thisWords) {
+      for (final String otherWord in otherWords) {
         perWordAverage *= (word.levenshteinDistance(otherWord) /
             max(word.length, otherWord.length));
       }
@@ -49,8 +49,8 @@ extension StringLevenshtein on String {
     if (thisString.isEmpty) return otherString.length;
     if (otherString.isEmpty) return thisString.length;
 
-    List<int> v0 = List<int>.filled(otherString.length + 1, 0);
-    List<int> v1 = List<int>.filled(otherString.length + 1, 0);
+    final List<int> v0 = List<int>.filled(otherString.length + 1, 0);
+    final List<int> v1 = List<int>.filled(otherString.length + 1, 0);
 
     for (int i = 0; i < otherString.length + 1; i < i++) {
       v0[i] = i;
@@ -60,7 +60,7 @@ extension StringLevenshtein on String {
       v1[0] = i + 1;
 
       for (int j = 0; j < otherString.length; j++) {
-        int cost = (thisString[i] == otherString[j]) ? 0 : 1;
+        final int cost = (thisString[i] == otherString[j]) ? 0 : 1;
         v1[j + 1] = min(v1[j] + 1, min(v0[j + 1] + 1, v0[j] + cost));
       }
 

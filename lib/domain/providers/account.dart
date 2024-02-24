@@ -28,7 +28,7 @@ class AccountsProvider extends ChangeNotifier {
   List<Account> get accountsAsList => List.unmodifiable(_accounts.values);
 
   /// Maps each of the [accounts] to an [AccountRef] object (which is a
-  /// wrapper around the [Account] object and its [id]) and returns the
+  /// wrapper around the [Account] object and its `id`) and returns the
   /// resulting list.
   List<AccountRef> get allAccounts => _accounts.entries
       .map((final MapEntry<String, Account> entry) =>
@@ -94,7 +94,7 @@ class AccountsProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// Get the [id] for a given [account].
+  /// Get the `id` for a given [account].
   String? getIdFor(final Account account) {
     return _accounts.entries
         .cast<MapEntry<String, Account>?>()
@@ -107,7 +107,7 @@ class AccountsProvider extends ChangeNotifier {
 
   /// Add an account to the list of accounts.
   Future<String> add(final Account account) async {
-    String id = _uniqueId();
+    final String id = _uniqueId();
     _accounts[id] = account;
     await save();
     notifyListeners();

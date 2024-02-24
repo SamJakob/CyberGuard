@@ -36,9 +36,9 @@ class AccessMethodRefEditor<T extends AccessMethod> {
 }
 
 /// A reference to an [AccessMethod] that can be used to retrieve the
-/// [AccessMethod] from a [UserAccount]. This is used to allow
+/// [AccessMethod] from a `UserAccount`. This is used to allow
 /// [AccessMethod]s to be stored in a centralized location (i.e., the
-/// [AccessMethodRegistry]) and then referenced by multiple [UserAccount]s.
+/// [AccessMethodRegistry]) and then referenced by multiple `UserAccount`s.
 ///
 /// An [AccessMethodRef] will typically just hold an [id] that can be used to
 /// retrieve the [AccessMethod] from the [AccessMethodRegistry].
@@ -49,12 +49,12 @@ class AccessMethodRef<T extends AccessMethod>
   /// Returns a clone of the [AccessMethod] that this [AccessMethodRef] is a
   /// reference to. This is useful for reading the [AccessMethod] without
   /// modifying the original. If you want to modify the [AccessMethod], use
-  /// [edit] instead, which will propagate changes back to the original and
+  /// `edit` instead, which will propagate changes back to the original and
   /// issue a notification to state management that the [AccessMethod] has
   /// changed.
   ///
   /// **CHANGES MADE TO THE RETURNED [AccessMethod] WILL NOT BE REFLECTED IN
-  /// THE ORIGINAL [AccessMethod]! AS NOTED, YOU MUST USE [edit] TO ALTER THE
+  /// THE ORIGINAL [AccessMethod]! AS NOTED, YOU MUST USE `edit` TO ALTER THE
   /// UNDERLYING [AccessMethod]**.
   T get read =>
       AccessMethodStore()._accessMethods[id]!.clone(keepPriority: true) as T;
@@ -108,8 +108,7 @@ class AccessMethodRef<T extends AccessMethod>
   }) : _priority = priority ?? -1;
 
   Uint8List pack() {
-    final messagePacker = Packer();
-    messagePacker
+    final messagePacker = Packer()
       ..packString(id)
       ..packInt(priority);
     return messagePacker.takeBytes();
@@ -135,7 +134,7 @@ class AccessMethodRef<T extends AccessMethod>
   @override
   String toString() {
     // Add priority if this is part of a tree.
-    String priorityStr = _owner != null ? ", priority = $priority" : "";
+    final String priorityStr = _owner != null ? ", priority = $priority" : "";
 
     return 'AccessMethodRef(id: $id$priorityStr)';
   }
@@ -268,7 +267,7 @@ class AccessMethodStore with ChangeNotifier {
     return register(method);
   }
 
-  /// Like [newReferenceTo] but doesn't create a new reference if one already
+  /// Like [createReferenceTo] but doesn't create a new reference if one already
   /// exists.
   AccessMethodRef<T> getReferenceTo<T extends AccessMethod>(final T method) {
     if (_accessMethods.containsValue(method)) {

@@ -63,7 +63,7 @@ class SettingsProvider extends StateNotifier<CGSettings> {
     state = state.copyWith(enableAnalysis: enableAnalysis);
   }
 
-  /// Toggles the [enableAnalysis] setting.
+  /// Toggles the `enableAnalysis` setting.
   void toggleEnableAnalysis() {
     setEnableAnalysis(!state.enableAnalysis);
   }
@@ -77,7 +77,7 @@ class SettingsProvider extends StateNotifier<CGSettings> {
     state = state.copyWith(enableServiceLookups: enableServiceLookups);
   }
 
-  /// Toggles the [enableServiceLookups] setting.
+  /// Toggles the `enableServiceLookups` setting.
   void toggleEnableServiceLookups() {
     setEnableServiceLookups(!state.enableServiceLookups);
   }

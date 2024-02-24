@@ -87,10 +87,10 @@ class Interface<InterfaceInitData> extends StatefulWidget {
       BuildContext, InterfaceProtectorMessenger)? initializeApp;
 
   const Interface({
-    final Key? key,
+    super.key,
     required this.interfaceBuilder,
     this.initializeApp,
-  }) : super(key: key);
+  });
 
   @override
   State<Interface<InterfaceInitData>> createState() =>

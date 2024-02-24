@@ -4,7 +4,7 @@
 /// Serialization occurs from [DataType] -> [SerializedDataType].
 /// Deserialization occurs from [SerializedDataType] -> [DataType].
 ///
-/// This is used by [StorageService] to convert data passed to it in an
+/// This is used by `StorageService` to convert data passed to it in an
 /// application-usable (i.e., hydrated [DataType] format) to a storage-usable
 /// (i.e., dehydrated [SerializedDataType] format) and vice versa.
 abstract class SerializationService<DataType, SerializedDataType> {

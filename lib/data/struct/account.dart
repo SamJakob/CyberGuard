@@ -136,8 +136,7 @@ class Account with ChangeNotifier {
 
   /// Packs an account into binary data for storage.
   Uint8List pack() {
-    final messagePacker = Packer();
-    messagePacker
+    final messagePacker = Packer()
       ..packString(_name)
       ..packString(_accountIdentifier)
       ..packString(_serviceUrl)
@@ -155,16 +154,16 @@ class Account with ChangeNotifier {
   static Account unpack(final Uint8List data) {
     final messageUnpacker = Unpacker(data);
 
-    String name = messageUnpacker.unpackString()!;
-    String accountIdentifier = messageUnpacker.unpackString()!;
-    String? serviceUrl = messageUnpacker.unpackString();
-    String? serviceChangePasswordUrl = messageUnpacker.unpackString();
-    String? iconUrl = messageUnpacker.unpackString();
-    bool? isEmailAddress = messageUnpacker.unpackBool();
-    bool? deviceProvidesAccess = messageUnpacker.unpackBool();
-    bool? accountIsShared = messageUnpacker.unpackBool();
-    int? accountPriority = messageUnpacker.unpackInt() ?? 1;
-    AccessMethodTree accessMethods = AccessMethodTree.unpack(
+    final String name = messageUnpacker.unpackString()!;
+    final String accountIdentifier = messageUnpacker.unpackString()!;
+    final String? serviceUrl = messageUnpacker.unpackString();
+    final String? serviceChangePasswordUrl = messageUnpacker.unpackString();
+    final String? iconUrl = messageUnpacker.unpackString();
+    final bool? isEmailAddress = messageUnpacker.unpackBool();
+    final bool? deviceProvidesAccess = messageUnpacker.unpackBool();
+    final bool? accountIsShared = messageUnpacker.unpackBool();
+    final int accountPriority = messageUnpacker.unpackInt() ?? 1;
+    final AccessMethodTree accessMethods = AccessMethodTree.unpack(
       Uint8List.fromList(messageUnpacker.unpackBinary()),
     )!;
 

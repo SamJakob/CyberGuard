@@ -28,7 +28,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.cert.Certificate;
 import java.security.spec.MGF1ParameterSpec;
 import java.util.Arrays;
 import java.util.Objects;
@@ -44,8 +43,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.OAEPParameterSpec;
 import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
-
-import android.security.KeyStoreException;
 
 public class HybridRSAEncryption implements EncryptionScheme {
 

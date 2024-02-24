@@ -141,13 +141,13 @@ abstract class EncryptedFileStorageService<DataType>
 
     // Generate the encryption keys, if they have not already been generated.
     await _generateEncryptionKey(name: encryptionKeyIdentifier);
-    super.initialize();
+    await super.initialize();
   }
 
   @override
   @mustCallSuper
   Future<void> uninitialize() async {
-    super.uninitialize();
+    await super.uninitialize();
   }
 
   /// Fetches the storage path from the platform channel.
@@ -183,14 +183,14 @@ abstract class EncryptedFileStorageService<DataType>
   @override
   Future<bool> hasData() async {
     final storageFile = await _getServiceStorageFile();
-    return await storageFile.exists();
+    return storageFile.exists();
   }
 
   /// Checks if there is a backup, for which data may be recovered from and
   /// where data recovery may be attempted.
   Future<bool> hasBackup() async {
     final backupFile = await _getServiceStorageBackupFile();
-    return await backupFile.exists();
+    return backupFile.exists();
   }
 
   /// Loads the encrypted data from disk, then performs decryption of the data.
@@ -299,7 +299,7 @@ abstract class EncryptedFileStorageService<DataType>
 
   Future<PlatformEnhancedSecurityResponse>
       _checkEnhancedSecurityStatus() async {
-    Map<dynamic, dynamic> response = await _secureStoragePlatform
+    final Map<dynamic, dynamic> response = await _secureStoragePlatform
         .invokeMethod('enhancedSecurityStatus') as Map;
 
     return PlatformEnhancedSecurityResponse.fromMap(
@@ -310,10 +310,15 @@ abstract class EncryptedFileStorageService<DataType>
   Future<void> _generateEncryptionKey(
       {final String? name, final bool? overwriteIfExists}) async {
     // If (and only if) the device is a simulator, don't run this method.
-    if (_isSimulator) return await simulateWait(SimulatedWaitDuration.medium);
+    if (_isSimulator) return simulateWait(SimulatedWaitDuration.medium);
 
-    (await _secureStoragePlatform.invokeMethod(
-        'generateKey', {"name": name, "overwriteIfExists": overwriteIfExists}));
+    await _secureStoragePlatform.invokeMethod(
+      'generateKey',
+      <String, Object?>{
+        "name": name,
+        "overwriteIfExists": overwriteIfExists,
+      },
+    );
   }
 
   Future<Uint8List> _encrypt({required final Uint8List data}) async {

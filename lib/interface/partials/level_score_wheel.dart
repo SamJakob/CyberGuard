@@ -12,10 +12,10 @@ class LevelScoreWheel extends HookWidget {
 
   final double size;
   const LevelScoreWheel({
-    final Key? key,
+    super.key,
     this.size = 100,
     required this.level,
-  }) : super(key: key);
+  });
 
   static LevelInfo generateLevelInfo(
       {required final Map<String, Account> accounts}) {

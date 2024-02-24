@@ -8,10 +8,10 @@ class DisabledWrapper extends StatelessWidget {
   final Widget child;
 
   const DisabledWrapper({
-    final Key? key,
+    super.key,
     required this.disabled,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(final BuildContext context) {

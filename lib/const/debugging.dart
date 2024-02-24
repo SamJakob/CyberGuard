@@ -11,7 +11,7 @@ enum SimulatedWaitDuration {
 }
 
 Future<void> simulateWait(final SimulatedWaitDuration duration) async {
-  return await simulateWaitForData(duration, data: null);
+  return simulateWaitForData(duration, data: null);
 }
 
 Future<T> simulateWaitForData<T>(final SimulatedWaitDuration duration,

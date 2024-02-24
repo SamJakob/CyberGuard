@@ -166,16 +166,15 @@ class _CGHomeSliverAppBarClipper extends CustomClipper<Path> {
     final curveStart =
         size.height * lerpDouble(curveStartFraction, 1.0, scrollPercentage)!;
 
-    final path = Path();
-    path.lineTo(0.0, curveStart);
+    final path = Path()..lineTo(0.0, curveStart);
 
     final midpoint = Offset(size.width / 2, size.height);
     final endpoint = Offset(size.width, curveStart);
 
-    path.quadraticBezierTo(midpoint.dx, midpoint.dy, endpoint.dx, endpoint.dy);
-
-    path.lineTo(size.width, 0);
-    path.close();
+    path
+      ..quadraticBezierTo(midpoint.dx, midpoint.dy, endpoint.dx, endpoint.dy)
+      ..lineTo(size.width, 0)
+      ..close();
     return path;
   }
 

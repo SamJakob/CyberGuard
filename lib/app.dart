@@ -206,8 +206,10 @@ class CGApp extends StatelessWidget {
                     advice: result,
                   ));
                 } catch (ex, st) {
-                  print(ex);
-                  print(st);
+                  if (kDebugMode) {
+                    print(ex);
+                    print(st);
+                  }
                 }
               }
 
@@ -241,8 +243,8 @@ class CGApp extends StatelessWidget {
 }
 
 /// A container for the data that is initialized with the [Interface] widget's
-/// [initializeApp] callback and subsequently passed to the [Interface]'s
-/// [interfaceBuilder] callback.
+/// `initializeApp` callback and subsequently passed to the [Interface]'s
+/// `interfaceBuilder` callback.
 ///
 /// This is, for example, used to initialize services and providers that are
 /// used by the application, whilst also allowing the [Interface] to display

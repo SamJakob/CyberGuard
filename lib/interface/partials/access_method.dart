@@ -20,15 +20,15 @@ class AddAccessMethodButton extends StatelessWidget {
   final Account account;
 
   const AddAccessMethodButton({
-    final Key? key,
+    super.key,
     required this.account,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(final BuildContext context) {
     return TextButton.icon(
       onPressed: () async {
-        RenderBox button = context.findRenderObject()! as RenderBox;
+        final RenderBox button = context.findRenderObject()! as RenderBox;
         final RenderBox overlay = Navigator.of(context)
             .overlay!
             .context
@@ -216,7 +216,7 @@ class AccessMethodRendererController {
   /// Notify all listeners of an event.
   Future<void> notifyListeners(final AccessMethodRendererEvent event) async {
     await Future.wait<void>(
-      _listeners.map((final listener) async => await listener(event)),
+      _listeners.map((final listener) async => listener(event)),
     );
   }
 
@@ -244,7 +244,7 @@ class AccessMethodRenderer extends StatefulHookConsumerWidget {
   final String? existingData;
 
   const AccessMethodRenderer({
-    final Key? key,
+    super.key,
     required this.account,
     required this.isEditing,
     this.controller,
@@ -257,8 +257,7 @@ class AccessMethodRenderer extends StatefulHookConsumerWidget {
   })  : assert(method != null || interfaceKey != null,
             "Either a method or an interface key must be provided."),
         assert(interfaceKey == null || onCreate != null,
-            "If an interfaceKey is specified, onCreate must be specified as this is used to create a new method."),
-        super(key: key);
+            "If an interfaceKey is specified, onCreate must be specified as this is used to create a new method.");
 
   @override
   ConsumerState<AccessMethodRenderer> createState() =>
@@ -298,7 +297,6 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
     switch (event) {
       case AccessMethodRendererEvent.save:
         await save();
-        break;
     }
   }
 
@@ -325,7 +323,6 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
             (editor.method as KnowledgeAccessMethod).data =
                 _dataEditingController.text;
           }
-          break;
         default:
           break;
       }
@@ -350,7 +347,6 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
             label: label,
           ),
         ));
-        break;
       case AccessMethodInterfaceKey.biometric:
         widget.onCreate?.call(AccessMethodStore().register(
           BiometricAccessMethod(
@@ -358,7 +354,6 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
             label: label,
           ),
         ));
-        break;
       case AccessMethodInterfaceKey.totp:
         widget.onCreate?.call(AccessMethodStore().register(
           KnowledgeAccessMethod(
@@ -367,7 +362,6 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
             label: "TOTP",
           ),
         ));
-        break;
       case AccessMethodInterfaceKey.recoveryEmail:
       case AccessMethodInterfaceKey.otherAccount:
         final accountId = _dataEditingController.text;
@@ -490,7 +484,7 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
               ].contains(widget.method!.read.userInterfaceKey))
                 IconButton(
                   onPressed: () async {
-                    bool wasUserPresent = isUserPresent;
+                    final bool wasUserPresent = isUserPresent;
 
                     await ref
                         .read(userPresenceProvider.notifier)
@@ -512,12 +506,14 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
                         valueToCopy = _labelEditingController.text;
                       }
 
-                      if (valueToCopy.isNotEmpty) {
-                        context.copyText(valueToCopy);
-                      } else {
-                        context.showInfoSnackbar(
-                          message: 'Nothing to copy.',
-                        );
+                      if (context.mounted) {
+                        if (valueToCopy.isNotEmpty) {
+                          context.copyText(valueToCopy);
+                        } else {
+                          context.showInfoSnackbar(
+                            message: 'Nothing to copy.',
+                          );
+                        }
                       }
                     }
 
@@ -539,7 +535,7 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
                 ),
                 padding: EdgeInsets.zero,
                 onPressed: () async {
-                  bool wasUserPresent = ref.read(userPresenceProvider);
+                  final bool wasUserPresent = ref.read(userPresenceProvider);
 
                   await ref.read(userPresenceProvider.notifier).checkPresence();
 
@@ -565,7 +561,7 @@ class _AccessMethodRendererState extends ConsumerState<AccessMethodRenderer> {
                   // Otherwise, delete the method. If we're here, it means
                   // the user has confirmed the deletion.
                   widget.method!.editor.deleteMethod();
-                  if (mounted) {
+                  if (context.mounted) {
                     context.showInfoSnackbar(
                       message: "Access method deleted.",
                     );

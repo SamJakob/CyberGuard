@@ -53,24 +53,21 @@ class ApolloLoadingSpinnerController extends FlareController {
               switch (node.name) {
                 case "Light":
                   stroke.uiColor = primaryColor!;
-                  break;
                 case "Middle":
-                  Color middleColor = primaryColor!
+                  final Color middleColor = primaryColor!
                       .withRed((primaryColor!.red * 0.8).round())
                       .withGreen((primaryColor!.green * 0.8).round())
                       .withBlue((primaryColor!.blue * 0.8).round());
 
                   stroke.uiColor = middleColor;
-                  break;
                 case "Dark":
-                  Color darkenedColor = primaryColor!
+                  final Color darkenedColor = primaryColor!
                       .withRed((primaryColor!.red * 0.6).round())
                       .withGreen((primaryColor!.green * 0.6).round())
                       .withBlue((primaryColor!.blue * 0.6).round())
                       .withOpacity(0.8);
 
                   stroke.uiColor = darkenedColor;
-                  break;
               }
             }));
   }

@@ -14,7 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 class ConnectionsScreen extends HookConsumerWidget {
   final ScrollController _scrollController = ScrollController();
 
-  ConnectionsScreen({final Key? key}) : super(key: key);
+  ConnectionsScreen({super.key});
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
@@ -330,7 +330,7 @@ class ConnectionsScreen extends HookConsumerWidget {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
               const SizedBox(height: 40),
             ],
           ),

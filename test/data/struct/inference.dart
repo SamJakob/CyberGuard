@@ -62,7 +62,7 @@ void main() {
     accountIdentifier: 'example@example.com',
   );
 
-  AccountsProvider accountsProvider = AccountsProvider(initialAccounts: {
+  final AccountsProvider accountsProvider = AccountsProvider(initialAccounts: {
     'test_google': googleAccount,
     'test_microsoft': microsoftAccount,
     'test_apollo_houston': apolloSoftwareHoustonAccount,
@@ -217,14 +217,14 @@ void main() {
   });
 
   // Initialize the inference service.
-  InferenceService inferenceService = InferenceService(
+  final InferenceService inferenceService = InferenceService(
     accountsProvider: accountsProvider,
     accountRefs: accountsProvider.allAccounts,
   );
 
   // Run the inference service to compute a graph of the user's account
   // data.
-  InferenceGraph graph = inferenceService.run();
+  final InferenceGraph graph = inferenceService.run();
 
   group('graph inference', () {
     // This test is no longer accurate since the graph inference algorithm

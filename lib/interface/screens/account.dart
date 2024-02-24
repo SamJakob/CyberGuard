@@ -32,9 +32,9 @@ class AccountScreen extends StatefulHookConsumerWidget {
   final String id;
 
   const AccountScreen({
-    final Key? key,
+    super.key,
     required this.id,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AccountScreen> createState() => _AccountScreenState();
@@ -102,7 +102,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
   /// Returns the favicon URL for the given [uri].
   Future<String?> _getFavicon(final Uri uri) async {
-    // TODO: support redirects?
+    // TODO(samjakob): support redirects?
 
     try {
       // Make a request to the service URL.
@@ -162,7 +162,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       // if it exists, use .well-known/change-password).
       Future<String?>(() async {
         try {
-          Uri changePasswordUri = uri.resolve("/.well-known/change-password");
+          final Uri changePasswordUri =
+              uri.resolve("/.well-known/change-password");
 
           final redirectResponse = await http.head(changePasswordUri);
 
@@ -192,8 +193,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     final String? oldServiceUrl = account.serviceUrl;
 
-    account.serviceUrl = _serviceUrlController.text;
-    account.accountIdentifier = _accountIdentifierController.text;
+    account
+      ..serviceUrl = _serviceUrlController.text
+      ..accountIdentifier = _accountIdentifierController.text;
 
     if (ref.read(settingsProvider).enableServiceLookups) {
       final (changePasswordUri, favicon) = await _doServiceLookup(
@@ -201,8 +203,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         oldServiceUrl: oldServiceUrl,
       );
 
-      account.serviceChangePasswordUrl = changePasswordUri;
-      account.iconUrl = favicon;
+      account
+        ..serviceChangePasswordUrl = changePasswordUri
+        ..iconUrl = favicon;
     }
 
     if (withChanges != null) {
@@ -232,17 +235,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     // account changes.
     useListenable(account);
 
-    ref.listen(userPresenceProvider, (final previous, final next) {
-      // If the user presence status has changed to false, cancel editing.
-      if (!next) {
-        setState(() {
-          _isEditing = false;
-        });
-      }
-    });
+    ref
+      ..listen(userPresenceProvider, (final previous, final next) {
+        // If the user presence status has changed to false, cancel editing.
+        if (!next) {
+          setState(() {
+            _isEditing = false;
+          });
+        }
+      })
 
-    // Subscribe to events from the access method provider.
-    ref.watch(accessMethodProvider);
+      // Subscribe to events from the access method provider.
+      ..watch(accessMethodProvider);
 
     if (account == null) {
       return const Center(
@@ -595,7 +599,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               label: const Text("Delete"),
               color: const Color(0xFFFF7C5D),
               onPressed: () async {
-                bool wasUserPresent = ref.read(userPresenceProvider);
+                final bool wasUserPresent = ref.read(userPresenceProvider);
 
                 await ref.read(userPresenceProvider.notifier).checkPresence();
 

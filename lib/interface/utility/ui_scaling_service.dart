@@ -33,7 +33,7 @@ class UiMetrics {
 /// https://github.com/ominibyte/flutter_device_type
 class UiScalingService {
   static UiScalingService? _service;
-  static Function? _onMetricsChange;
+  static void Function()? _onMetricsChange;
   late UiMetrics _metrics;
   bool _initialized = false;
 

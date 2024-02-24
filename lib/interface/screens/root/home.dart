@@ -233,7 +233,6 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: 40),
         ...inferenceData.advice
             .map((final advice) => AdviceCard(advice: advice))
-            .toList()
       ];
     }
 

@@ -27,7 +27,7 @@ const tabs = [
 
 class RootScreen extends StatelessWidget {
   final Widget child;
-  const RootScreen({final Key? key, required this.child}) : super(key: key);
+  const RootScreen({super.key, required this.child});
 
   /// Creates a [CustomTransitionPage] for a RootScreen tab.
   static Page<void> createTabPageBuilder(final BuildContext context,
@@ -40,7 +40,9 @@ class RootScreen extends StatelessWidget {
 
   /// Returns the currently selected index (or null if an index couldn't be found).
   int? getCurrentIndex(final BuildContext context) {
-    final currentLocation = GoRouter.of(context).location;
+    final currentLocation = GoRouterState.of(context).fullPath;
+    if (currentLocation == null) return null;
+
     final index =
         tabs.indexWhere((final tab) => tab.target.startsWith(currentLocation));
     return index < 0 ? null : index;

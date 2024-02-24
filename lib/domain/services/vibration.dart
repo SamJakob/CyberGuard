@@ -9,21 +9,21 @@ class VibrationService {
     return VibrationService._(true);
   }
 
-  void vibrateEmphasis() async {
+  Future<void> vibrateEmphasis() async {
     if (_enabled) {
-      HapticFeedback.heavyImpact();
+      await HapticFeedback.heavyImpact();
     }
   }
 
-  void vibrateSuccess() async {
+  Future<void> vibrateSuccess() async {
     if (_enabled) {
-      HapticFeedback.mediumImpact();
+      await HapticFeedback.mediumImpact();
     }
   }
 
-  void vibrateError() async {
+  Future<void> vibrateError() async {
     if (_enabled) {
-      HapticFeedback.heavyImpact();
+      await HapticFeedback.heavyImpact();
     }
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:cyberguard/data/struct/access_method/access_method.dart';
 import 'package:cyberguard/domain/services/vibration.dart';
 import 'package:cyberguard/interface/components/apollo_loading_spinner.dart';
 import 'package:cyberguard/interface/partials/app_word_mark.dart';
@@ -88,10 +89,10 @@ class TotpUrl {
       return null;
     }
 
-    Uri parsedUri = Uri.parse(totpUrl);
+    final Uri parsedUri = Uri.parse(totpUrl);
     if (parsedUri.pathSegments.length > 1) return null;
 
-    String label = parsedUri.pathSegments.length == 1
+    final String label = parsedUri.pathSegments.length == 1
         ? parsedUri.pathSegments.last
         : "Unknown";
     final parameters = parsedUri.queryParameters;
@@ -129,9 +130,7 @@ class TotpUrl {
   /// MessagePack serialization. This can then be used with
   /// [KnowledgeAccessMethod] to create a new TOTP access method.
   String serialize() {
-    final messagePacker = Packer();
-
-    messagePacker
+    final messagePacker = Packer()
       ..packString(rawUrl)
       ..packString(secret)
       ..packString(label)
@@ -187,7 +186,7 @@ class TotpUrl {
 /// show code live)
 /// - https://stefansundin.github.io/2fa-qr/ (render QR code from TOTP)
 class TotpScanner extends StatefulHookWidget {
-  const TotpScanner({final Key? key}) : super(key: key);
+  const TotpScanner({super.key});
 
   @override
   State<TotpScanner> createState() => _TotpScannerState();
@@ -256,7 +255,7 @@ class _TotpScannerState extends State<TotpScanner> with WidgetsBindingObserver {
                 }
 
                 // Attempt to obtain the barcode value.
-                String? value = barcode.rawValue;
+                final String? value = barcode.rawValue;
                 if (value == null) continue;
 
                 // Attempt to parse the URL as a TOTP. If it fails, continue.
@@ -361,7 +360,7 @@ class _TotpScannerState extends State<TotpScanner> with WidgetsBindingObserver {
                           child: const Text(
                               "...or tap here to import from Camera Roll..."),
                           onPressed: () async {
-                            _controller.stop();
+                            await _controller.stop();
                             setState(() {
                               _processing = true;
                             });
@@ -376,7 +375,7 @@ class _TotpScannerState extends State<TotpScanner> with WidgetsBindingObserver {
                               if (image != null) {
                                 if (!(await _controller
                                     .analyzeImage(image.path))) {
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     context.showErrorSnackbar(
                                         message: "No QR code found in image.");
                                   }
@@ -391,7 +390,7 @@ class _TotpScannerState extends State<TotpScanner> with WidgetsBindingObserver {
                             setState(() {
                               _processing = false;
                             });
-                            _controller.start();
+                            await _controller.start();
                             return;
                           },
                         ),

@@ -6,16 +6,16 @@ class FutureExecutorButton extends StatefulWidget {
   final Widget label;
   final Color color;
   final Color? foregroundColor;
-  final Function onPressed;
+  final Future<void> Function() onPressed;
 
   const FutureExecutorButton({
-    final Key? key,
+    super.key,
     required this.icon,
     required this.label,
     required this.color,
     required this.onPressed,
     this.foregroundColor,
-  }) : super(key: key);
+  });
 
   @override
   State<FutureExecutorButton> createState() => _FutureExecutorButtonState();

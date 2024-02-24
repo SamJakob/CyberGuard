@@ -49,8 +49,8 @@ class AggregatedSecureDataSerializationService
 
     final messageUnpacker = Unpacker(data);
 
-    String headerAppName = messageUnpacker.unpackString()!;
-    int headerAppVersion = messageUnpacker.unpackInt()!;
+    final String headerAppName = messageUnpacker.unpackString()!;
+    final int headerAppVersion = messageUnpacker.unpackInt()!;
 
     if (headerAppName != kAppName) {
       throw CGError(
@@ -86,8 +86,7 @@ class AggregatedSecureDataSerializationService
     // Don't bother encrypting/serializing if there's no data.
     if (data == null || data.isEmpty) return null;
 
-    final messagePacker = Packer();
-    messagePacker
+    final messagePacker = Packer()
       ..packString(kAppName)
       ..packInt(CGAggregatedSecureData.storageDataVersion)
       ..packBool(data.accounts != null && data.accounts!.isNotEmpty)
@@ -135,7 +134,7 @@ class AggregatedSecureDataStorageService
 
   @override
   Future<CGAggregatedSecureData> load() async {
-    CGAggregatedSecureData data = await super.load();
+    final CGAggregatedSecureData data = await super.load();
     return _cache = data;
   }
 
@@ -173,6 +172,6 @@ class AggregatedSecureDataStorageService
       accounts: accounts ?? _cache!.accounts,
     );
 
-    super.save(_cache!);
+    await super.save(_cache!);
   }
 }

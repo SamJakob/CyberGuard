@@ -18,15 +18,14 @@ class ProgressWheel extends StatefulHookWidget {
   final ProgressWheelAnimateFrom animateFrom;
 
   const ProgressWheel({
-    final Key? key,
+    super.key,
     required this.size,
     this.value,
     this.valueComputer,
     this.children,
     this.animation,
     this.animateFrom = ProgressWheelAnimateFrom.start,
-  })  : assert(value != null || valueComputer != null),
-        super(key: key);
+  }) : assert(value != null || valueComputer != null);
 
   @override
   State<ProgressWheel> createState() => _ProgressWheelState();
@@ -120,14 +119,15 @@ class _ProgressWheelIndicator extends CustomPainter {
 
     // Draw the background, starting at 0deg and continuing for 360deg (i.e.,
     // the entire circle).
-    canvas.drawArc(renderBox, vector_math.radians(0), vector_math.radians(360),
-        false, backgroundPaint);
+    canvas
+      ..drawArc(renderBox, vector_math.radians(0), vector_math.radians(360),
+          false, backgroundPaint)
 
-    // Then, draw the foreground from the top (i.e., 270 deg), and continue for
-    // the fraction - value - multiplied by 360deg (i.e., a full rotation). So,
-    // if value is 0.5, this will continue for 0.5 * 360deg, or 180deg.
-    canvas.drawArc(renderBox, vector_math.radians(270),
-        vector_math.radians(360) * value, false, foregroundPaint);
+      // Then, draw the foreground from the top (i.e., 270 deg), and continue for
+      // the fraction - value - multiplied by 360deg (i.e., a full rotation). So,
+      // if value is 0.5, this will continue for 0.5 * 360deg, or 180deg.
+      ..drawArc(renderBox, vector_math.radians(270),
+          vector_math.radians(360) * value, false, foregroundPaint);
   }
 
   @override
